@@ -10,15 +10,15 @@ import { cn } from "@/lib/utils";
 
 function versionKindLabel(t: ReturnType<typeof useTranslation>["t"], kind: HistoryCheckpoint["versionKind"]) {
   const labels: Record<HistoryCheckpoint["versionKind"], string> = {
-    generation: t("history.versionKind.generation", { defaultValue: "生成" }),
-    requirements_review: t("history.versionKind.requirementsReview", { defaultValue: "需求确认" }),
-    architecture_review: t("history.versionKind.architectureReview", { defaultValue: "架构确认" }),
-    artifact_edit: t("history.versionKind.artifactEdit", { defaultValue: "制品编辑" }),
-    file_edit: t("history.versionKind.fileEdit", { defaultValue: "文件编辑" }),
-    code_edit: t("history.versionKind.codeEdit", { defaultValue: "代码编辑" }),
-    modify: t("history.versionKind.modify", { defaultValue: "修改生成" }),
-    rollback: t("history.versionKind.rollback", { defaultValue: "回滚恢复" }),
-    regenerate: t("history.versionKind.regenerate", { defaultValue: "重新生成" }),
+    generation: t("history.versionKind.generation"),
+    requirements_review: t("history.versionKind.requirementsReview"),
+    architecture_review: t("history.versionKind.architectureReview"),
+    artifact_edit: t("history.versionKind.artifactEdit"),
+    file_edit: t("history.versionKind.fileEdit"),
+    code_edit: t("history.versionKind.codeEdit"),
+    modify: t("history.versionKind.modify"),
+    rollback: t("history.versionKind.rollback"),
+    regenerate: t("history.versionKind.regenerate"),
   };
   return labels[kind] ?? kind;
 }
@@ -250,7 +250,7 @@ export function VersionHistorySidebar({
               <div className="relative border-l border-white/10 ml-4 space-y-8 pb-10">
                 {isHistoryLoading ? (
                   <div className="pl-6 text-sm text-muted-foreground">
-                    {t("history.loading", { defaultValue: "正在加载版本历史..." })}
+                    {t("history.loading")}
                   </div>
                 ) : history?.length ? history.map((checkpoint) => (
                   <div key={checkpoint.id} className="relative pl-6">
@@ -310,23 +310,16 @@ export function VersionHistorySidebar({
                       <div className="mb-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                         {typeof checkpoint.sourceVersion === "number" ? (
                           <span className="rounded-full border border-white/10 bg-black/20 px-2 py-1">
-                            {t("history.sourceVersion", {
-                              defaultValue: "来源版本 v{{version}}",
-                              version: checkpoint.sourceVersion,
-                            })}
+                            {t("history.sourceVersion", { version: checkpoint.sourceVersion })}
                           </span>
                         ) : null}
                         {typeof checkpoint.restoredFromVersion === "number" ? (
                           <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-1 text-amber-200">
-                            {t("history.restoredFromVersion", {
-                              defaultValue: "从 v{{version}} 恢复",
-                              version: checkpoint.restoredFromVersion,
-                            })}
+                            {t("history.restoredFromVersion", { version: checkpoint.restoredFromVersion })}
                           </span>
                         ) : null}
                         <span className="rounded-full border border-white/10 bg-black/20 px-2 py-1">
                           {t("history.snapshotCounts", {
-                            defaultValue: "{{artifacts}} 制品 / {{agentFiles}} 阶段文件 / {{files}} 工作区文件 / {{modules}} 模块",
                             artifacts: checkpoint.stateManifest.artifacts.length,
                             agentFiles: agentFileCount,
                             files: checkpoint.stateManifest.codeFiles.length,
@@ -335,7 +328,6 @@ export function VersionHistorySidebar({
                         </span>
                         <span className="rounded-full border border-white/10 bg-black/20 px-2 py-1">
                           {t("history.changeSummary", {
-                            defaultValue: "新增 {{added}} / 修改 {{modified}} / 删除 {{deleted}}",
                             added: changeSummary.added,
                             modified: changeSummary.modified,
                             deleted: changeSummary.deleted,
@@ -395,10 +387,7 @@ export function VersionHistorySidebar({
                     <div>{t("history.empty")}</div>
                     {pendingPreviewVersion ? (
                       <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-xs leading-6 text-amber-100">
-                        {t("history.emptyPendingPreview", {
-                          defaultValue: "当前已经有一个临时预览版本 v{{version}} 可供查看，但它还没有正式写入版本历史。等本轮任务完成或确认后，这里才会出现正式 Checkpoint。",
-                          version: pendingPreviewVersion,
-                        })}
+                        {t("history.emptyPendingPreview", { version: pendingPreviewVersion })}
                       </div>
                     ) : null}
                   </div>

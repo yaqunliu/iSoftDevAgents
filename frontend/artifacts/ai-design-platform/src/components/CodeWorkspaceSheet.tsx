@@ -778,7 +778,7 @@ export function CodeWorkspaceSheet({
       return t("code.lockedByOther");
     }
     if (isHistoricalVersion && isEditing) {
-      return t("code.historySaveHint", { defaultValue: "你正在查看历史版本，保存后会基于这个版本创建新版本。" });
+      return t("code.historySaveHint");
     }
     if (editorStatus === "unsaved") return t("code.status.unsaved");
     if (editorStatus === "autosaving") return t("code.status.autosaving");
@@ -791,8 +791,8 @@ export function CodeWorkspaceSheet({
   })();
 
   const saveButtonLabel = isHistoricalVersion
-    ? t("code.saveAsNewVersionFromHistory", { defaultValue: "基于该历史版本创建新版本" })
-    : t("code.saveDraft", { defaultValue: "保存草稿" });
+    ? t("code.saveAsNewVersionFromHistory")
+    : t("code.saveDraft");
   // 这里必须始终以接口返回的最新文件内容为准，不能再从左侧树节点缓存里取内容，
   // 否则用户切换版本或保存为新版本后，右侧预览会继续显示旧内容。
   const selectedDocContent = projectFile?.content ?? "";
@@ -835,10 +835,7 @@ export function CodeWorkspaceSheet({
                     )}
                   >
                     {workspaceVersionState.isPendingPreview
-                      ? t("code.pendingVersionBadge", {
-                          defaultValue: "预览 v{{version}}",
-                          version: workspaceVersionState.version,
-                        })
+                      ? t("code.pendingVersionBadge", { version: workspaceVersionState.version })
                       : `v${workspaceVersionState.version}`}
                   </Badge>
                 ) : null}
@@ -911,7 +908,7 @@ export function CodeWorkspaceSheet({
                       />
                     ) : isProjectFilesLoading ? (
                       <div className="px-2 text-sm text-muted-foreground">
-                        {t("code.loadingDocs", { defaultValue: "正在加载文档列表..." })}
+                        {t("code.loadingDocs")}
                       </div>
                     ) : (
                       <div className="px-2 text-sm text-muted-foreground">
@@ -1002,10 +999,7 @@ export function CodeWorkspaceSheet({
                     ) : null}
                     {isHistoricalVersion ? (
                       <div className="mt-3 rounded-xl border border-cyan-500/20 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-100">
-                        {t("code.historyVersionBanner", {
-                          defaultValue: "当前查看的是历史版本 v{{version}}。手动保存不会覆盖旧版本，而是创建一个新的版本。",
-                          version,
-                        })}
+                        {t("code.historyVersionBanner", { version })}
                       </div>
                     ) : null}
                   </div>
@@ -1052,10 +1046,7 @@ export function CodeWorkspaceSheet({
                     ) : null}
                     {isHistoricalVersion ? (
                       <div className="mt-3 rounded-xl border border-cyan-500/20 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-100">
-                        {t("code.historyVersionBanner", {
-                          defaultValue: "当前查看的是历史版本 v{{version}}。手动保存不会覆盖旧版本，而是创建一个新的版本。",
-                          version,
-                        })}
+                        {t("code.historyVersionBanner", { version })}
                       </div>
                     ) : null}
                   </div>
