@@ -237,6 +237,15 @@ def _patched_run_with_retry(
 ) -> Any:
     last_error: Exception | None = None
 
+    # 这个函数整体替换了 util.run_with_retry，所以输出语言指令必须在这里再注入一次，
+    # 否则 agents.yaml / tasks.yaml 里的 {output_language_instruction} 会原样进提示词。
+    try:
+        from util.lang_detect import apply_output_language_instruction
+
+        inputs = apply_output_language_instruction(inputs)
+    except Exception:
+        pass
+
     def raise_if_cancelled() -> None:
         if cancel_event is not None and getattr(cancel_event, "is_set", None) and cancel_event.is_set():
             raise RuntimeError(f"[{name}] Cancelled before completing retry chain.")

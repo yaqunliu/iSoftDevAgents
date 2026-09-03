@@ -1,12 +1,19 @@
 /**
  * 接口注释：
- * gmonkey.ai 官网首页，挂在公开路由 /landing 上（不经过 ProtectedRoute）。
+ * gmonkey.ai 官网首页，挂在公开路由 "/" 上（不经过 ProtectedRoute）。
+ * 访客直接输入域名即落在这里，不需要部署层做任何路径映射。
  *
  * 原因注释：
- * 没有直接占用 "/"。App.tsx 里 "/" 是 ProtectedRoute 包着的产品首页，
- * 没有 token 的访客会被重定向到 /auth——那是产品应用应有的行为，改动它风险太大，
- * 会牵动现有用户的登录回跳。所以官网走独立公开路由，
- * 根域名指向 /landing 交给部署层（nginx）做映射，前端代码零冲突。
+ * 这一段以前写的是"官网挂在 /landing，根域名交给 nginx 映射"。
+ * 那个方案已经废弃：官网现在直接占用 "/"，产品首页搬到了 lib/app-routes.ts
+ * 的 APP_HOME_PATH（/app），/landing 只留了一个 replace 重定向兜住旧链接。
+ * 保留这段修订记录是因为"根路径归谁"决定了五处回跳目标（登录成功、未登录
+ * 的 next、项目页返回、404 返回、官网登录按钮），改动时必须连着一起看——
+ * 详见 App.tsx 路由表上方的注释。
+ *
+ * 进入产品的入口有两个，都指向 /auth，都由
+ * components/landing/LandingLoginLink.tsx 统一解析地址：
+ * 顶部导航的 "Product" 项，以及右侧的 "Log in" 胶囊按钮。
  *
  * 设计注释：
  * 区块顺序就是一条论证链，不是随便排的：

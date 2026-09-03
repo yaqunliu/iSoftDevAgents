@@ -106,26 +106,45 @@ export function LandingNav() {  const { t } = useTranslation();
 
               锚点项只在首页有效（法务页和 Contact 页不渲染这条导航），
               所以这里不需要处理"锚点不在当前页"的情况。 */}
-          {NAV_ITEMS.map((item) =>
-            item.kind === "route" ? (
-              <Link
-                key={item.key}
-                href={item.href}
-                className={NAV_LINK_CLASS}
-              >
-                {t(`lp.nav.${item.key}`)}
-              </Link>
-            ) : (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => handleNavClick(item.key)}
-                className={NAV_LINK_CLASS}
-              >
-                {t(`lp.nav.${item.key}`)}
-              </button>
-            ),
-          )}
+          {NAV_ITEMS.map((item) => {
+            switch (item.kind) {
+              // 产品入口。原因注释：必须走 LandingLoginLink，不能图省事写成
+              // <Link href="/auth">——配了 VITE_APP_URL 之后 /auth 会变成跨域绝对地址，
+              // 那时 wouter 的 Link 跳不出当前应用，点击会变成"什么都不发生"。
+              // 元素类型的选择逻辑已经收在 LandingLoginLink 里，这里只管用。
+              case "app":
+                return (
+                  <LandingLoginLink key={item.key} className={NAV_LINK_CLASS}>
+                    {t(`lp.nav.${item.key}`)}
+                  </LandingLoginLink>
+                );
+              case "route":
+                return (
+                  <Link key={item.key} href={item.href} className={NAV_LINK_CLASS}>
+                    {t(`lp.nav.${item.key}`)}
+                  </Link>
+                );
+              case "section":
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => handleNavClick(item.key)}
+                    className={NAV_LINK_CLASS}
+                  >
+                    {t(`lp.nav.${item.key}`)}
+                  </button>
+                );
+              default: {
+                // 教学注释：这一行是穷尽性检查。将来往 LandingNavItem 加了新的 kind
+                // 却忘了在这里加分支时，item 的类型不再是 never，TypeScript 会在
+                // 编译期报错。没有这行的话，漏掉的 kind 会安静地渲染成 null——
+                // 导航上少一项，不报错、不白屏，只能靠人眼发现。
+                const exhaustive: never = item;
+                return exhaustive;
+              }
+            }
+          })}
         </nav>
 
         {/* 登录入口。指向站内的产品认证页 /auth。

@@ -50,6 +50,7 @@ def _managed_module_names() -> tuple[str, ...]:
         "util",
         "util.runtime_env",
         "util.util",
+        "util.lang_detect",
         "util.DAG",
         "util.Artifacts",
         "util.validate_format",
@@ -365,6 +366,29 @@ def _merge_usage_payloads(
     }
 
 
+def _apply_detected_output_language(description_text: str) -> str | None:
+    """按用户描述的语言决定这一轮需求工件的输出语言。
+
+    必须在 _prepared_runtime 之内调用：sys.path 只有到那时才指向 reagent 包。
+    识别失败时不能中断整轮需求工程，退回默认语言即可，所以这里只记录不抛出。
+    """
+
+    try:
+        from util.lang_detect import detect_and_set_language
+
+        language = detect_and_set_language(description_text)
+    except Exception as error:  # pragma: no cover - 只在 reagent 包不可用时触发
+        print(
+            f"[runtime_bridge] output language detection skipped: {error}",
+            file=sys.__stderr__,
+            flush=True,
+        )
+        return None
+
+    print(f"[runtime_bridge] output language = {language}", file=sys.__stderr__, flush=True)
+    return language
+
+
 def _build_tracked_run_with_retry(
     run_with_retry_override: Any,
     usage_payloads: list[dict[str, Any]],
@@ -592,6 +616,8 @@ def run_requirements_agent_analysis(
             prompt_input_provider=prompt_input_provider,
             setup_logging=setup_logging,
         ) as runtime:
+            _apply_detected_output_language(description_text)
+
             standard_process = runtime["StandardProcess"]
             prompt_analysis_run = getattr(standard_process, "PromptAnalysisRun", None)
             if prompt_analysis_run is not None:
@@ -680,6 +706,8 @@ def run_requirements_agent_full(
             prompt_input_provider=prompt_input_provider,
             setup_logging=setup_logging,
         ) as runtime:
+            _apply_detected_output_language(description_text)
+
             import NonStandardProcess
 
             standard_process = runtime["StandardProcess"]

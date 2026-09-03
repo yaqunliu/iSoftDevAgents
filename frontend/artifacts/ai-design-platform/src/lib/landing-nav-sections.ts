@@ -61,21 +61,40 @@ export const NAV_SECTIONS: LandingSectionId[] = ["pipeline", "observability", "s
 export const TOP_NAV_SECTIONS: LandingSectionId[] = ["pipeline", "stack", "company"];
 
 /**
- * 顶部导航的完整项目表：三个同页锚点 + 一个跳转到 /contact 的路由项。
+ * 顶部导航的完整项目表：一个产品入口 + 三个同页锚点 + 一个跳转到 /contact 的路由项。
  *
  * 设计注释：
  * 为什么要引入这个带 kind 的联合类型，而不是往 TOP_NAV_SECTIONS 里塞一个 "contact"？
- * 因为这两类导航项的行为根本不同：锚点项要平滑滚动并扣掉导航高度，
- * 路由项要走 wouter 的 Link 做 SPA 跳转。
+ * 因为这几类导航项的行为根本不同：锚点项要平滑滚动并扣掉导航高度，
+ * 路由项要走 wouter 的 Link 做 SPA 跳转，产品项还要按部署形态在 Link 和 <a> 之间切换。
  * 如果混在同一个字符串数组里，渲染方只能靠"如果 id 等于 contact 就特殊处理"
  * 这种硬编码分支来区分，下一个人加第二个路由项时一定会漏掉那个分支。
  * 把差异编码进类型，TypeScript 会在渲染方漏处理某个 kind 时直接报错。
  */
 export type LandingNavItem =
   | { kind: "section"; key: LandingSectionId }
-  | { kind: "route"; key: "contact"; href: string };
+  | { kind: "route"; key: "contact"; href: string }
+  // 产品入口（顶部导航的"Product"），点击后离开官网、进入产品认证页 /auth。
+  | { kind: "app"; key: "product" };
 
+/**
+ * 原因注释：
+ * "product" 这一项为什么不带 href，而 "contact" 带？
+ *
+ * 因为产品入口的地址不是常量：它由 landing-app-url.ts 的 landingLoginUrl() 算出来，
+ * 而那个函数要读 import.meta.env.VITE_APP_URL——官网和产品分域部署时地址会变成
+ * 跨域绝对地址。本文件被 node 的 test runner 直接 import，
+ * 而 node 里 import.meta.env 是 undefined，在这里求值会当场抛 TypeError，
+ * 把整个 landing-nav-sections.test.ts 打挂（同理由见 landing-app-url.ts 里
+ * resolveAppOrigin 没有单测）。
+ *
+ * 所以这里只声明"这是产品入口"这个事实，地址留给组件在渲染时解析。
+ * 换句话说：常量文件保持对环境变量零依赖，是它能被单测覆盖的前提。
+ */
 export const NAV_ITEMS: LandingNavItem[] = [
+  // 产品入口放在第一位：访客扫导航时最先要找的就是"产品在哪"，
+  // 而不是流水线细节或公司介绍。
+  { kind: "app", key: "product" },
   ...TOP_NAV_SECTIONS.map((key): LandingNavItem => ({ kind: "section", key })),
   { kind: "route", key: "contact", href: LANDING_ROUTES.contact },
 ];

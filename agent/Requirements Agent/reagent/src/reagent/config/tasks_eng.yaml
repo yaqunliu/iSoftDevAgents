@@ -3,6 +3,8 @@ competitive_analysis_task:
     Conduct a focused and data-driven competitive analysis for the target product {project_name}. Identify key competitors, compare core features, pricing, user experience, technical stack, and market positioning. Highlight each competitor’s strengths and weaknesses, uncover gaps and opportunities, and provide clear recommendations on how our product can differentiate and gain competitive advantage.
     There is given project description: {Description}.
   expected_output: >
+    {output_language_instruction}
+
     Conduct a focused and data-driven competitive analysis for the target product {project_name}. 
     Identify key competitors, compare their core features, pricing, user experience, technical approach, and market positioning. Analyze strengths, weaknesses, opportunities, and threats.
     A summary of competitors' pain points and a fundamental analysis of their root causes is highly recommended.
@@ -18,6 +20,8 @@ business_requirements_document_task:
     context diagram should also be inclued as part of BRD:
     {context_diagram}
   expected_output: >
+    {output_language_instruction}
+
     A fully written Business Requirements Document that follows the exact structure 
     of document_format_reference, here is document format for referance:
     {document_format_reference}
@@ -80,6 +84,8 @@ draft_context_diagram_task:
     you can use competitive analysis as referance:
     {competitive_analysis}
   expected_output: >
+    {output_language_instruction}
+
     A Mermaid diagram in a code block that:
     - Uses flowchart syntax (e.g., "flowchart TD" or "flowchart LR")
     - Contains one main node representing the system boundary
@@ -109,6 +115,8 @@ user_introduction_draft_task:
     {BRD}
 
   expected_output: >
+    {output_language_instruction}
+
     A  well-organized **narrative-style user introduction**, where **each user group 
     is introduced in an independent subsection**. For each user group, include:
       - 用户群体 (User Group)
@@ -146,6 +154,8 @@ user_case_draft_task:
     {user_introduction}
 
   expected_output: >
+    {output_language_instruction}
+
     The output MUST be a collection of user use cases stored as a **list of dictionaries**, 
     where each dictionary represents one complete use case.
     Each use case dictionary MUST include the following fields:
@@ -207,6 +217,8 @@ data_flow_diagram_draft_task:
     {reference}
 
   expected_output: >
+    {output_language_instruction}
+
     A valid Mermaid-based **Data Flow Diagram** (Level-0 or Level-1) in a code block.
     The diagram MUST:
     - Use flowchart syntax (e.g., "flowchart TD" or "flowchart LR")
@@ -240,6 +252,8 @@ dialog_map_draft_task:
     {reference}
 
   expected_output: >
+    {output_language_instruction}
+
     A Dialog Map represented in Mermaid syntax, inside a code block, that:
       - Uses flowchart syntax (e.g., "flowchart TD" or "flowchart LR")
       - Contains one top-level goal per user use case as a high-level dialog node
@@ -280,6 +294,8 @@ data_dictionary_draft_task:
     {reference}
 
   expected_output: >
+    {output_language_instruction}
+
     A comprehensive **Data Dictionary** presented in Markdown format.  
     The output MUST include:
 
@@ -348,7 +364,7 @@ SRS_draft_task:
     Insert each diagram or table into the most appropriate subsection of the generated chapter.  
     You MUST analyze the meaning of the diagram and determine the correct placement.
 
-    Your output MUST be in chinese.
+    {output_language_instruction}
 
     Chapter Template Requirements
     Generate a chapter as a Python dictionary that contains:
@@ -460,6 +476,8 @@ extract_document_skeleton_task:
     document's logical organization without copying its full content.
 
   expected_output: >
+    {output_language_instruction}
+
     Output a JSON list where each element represents a Level-1 section as a dictionary.
     Each dictionary must contain:
       - "title": the Level-1 section name.
@@ -531,6 +549,8 @@ artifact_planning_task:
     {artifact_to_choose}
 
   expected_output: >
+    {output_language_instruction}
+
     A Python list of lists where each sub-list contains the artifact dependencies
     required for the corresponding chapter. The output must be valid Python syntax
     and contain no trailing commentary.

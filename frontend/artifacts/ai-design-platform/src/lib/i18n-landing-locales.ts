@@ -21,6 +21,9 @@
 export const landingLocaleResources = {
   en: {
     // ---------- 顶部导航 ----------
+    // 产品入口。文案用 "Product" 而不是 "Log in"——右侧胶囊按钮已经是 "Log in" 了，
+    // 两个入口同名会让人以为其中一个点错了地方，尽管它们确实指向同一个 /auth。
+    "lp.nav.product": "Product",
     "lp.nav.pipeline": "Agents",
     "lp.nav.observability": "Observability",
     "lp.nav.stack": "Stack",

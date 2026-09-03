@@ -72,6 +72,39 @@ test("the Contact entry is a route, not an anchor, and points at a real page pat
   );
 });
 
+// 回归：产品入口必须是 kind "app"，因为只有这个 kind 会渲染成 LandingLoginLink，
+// 而 LandingLoginLink 是唯一会按"站内路径 / 跨域地址"切换 Link 与 <a> 的元素。
+// 如果有人把它改成 kind "route" + href "/auth"，站内部署下看起来完全正常，
+// 只有配了 VITE_APP_URL 的分域部署会坏——点击后 wouter 试图在官网内部匹配
+// 一个跨域地址，结果是纹丝不动、控制台无报错。这类"只在某套环境下坏"的故障
+// 最值得用测试钉住。
+test("the Product entry is an app entry so its href can leave the landing site", () => {
+  const product = NAV_ITEMS.find((item) => item.key === "product");
+  assert.ok(product, "Product entry is missing from the top nav");
+  assert.equal(product.kind, "app");
+  assert.ok(
+    !LANDING_SECTION_IDS.includes(product.key as never),
+    "product must not double as a section id",
+  );
+});
+
+// 产品入口是访客要找的第一个东西，排在锚点和 Contact 之前。
+test("the Product entry comes first in the top nav", () => {
+  assert.equal(NAV_ITEMS[0]?.key, "product");
+});
+
+// 原因注释：app 类的导航项不带 href，地址在渲染时由 landingLoginUrl() 解析。
+// 这不是漏写——本文件被 node 的 test runner import，而 landingLoginUrl 会读
+// import.meta.env，在 node 里求值会抛 TypeError 并打挂整个测试文件。
+// 这条断言把"常量文件对环境变量零依赖"这个前提钉住。
+test("app entries carry no build-time href so this module stays env-free", () => {
+  for (const item of NAV_ITEMS) {
+    if (item.kind === "app") {
+      assert.ok(!("href" in item), "app entries must resolve their href at render time");
+    }
+  }
+});
+
 test("NAV_ITEMS stays short enough to be read rather than ignored", () => {
   assert.ok(NAV_ITEMS.length <= 5, "top nav should keep at most five entries");
 });

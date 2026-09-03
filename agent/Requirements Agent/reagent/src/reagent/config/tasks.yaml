@@ -10,6 +10,8 @@ competitive_analysis_task:
     {Description}。
 
   expected_output: >
+    {output_language_instruction}
+
     针对目标产品 {project_name} 产出一份聚焦且数据驱动的竞品分析。
     识别主要竞争对手，并从其核心功能、定价策略、用户体验、技术路线、市场定位等方面进行比较。
     分析每个竞争对手的优势、劣势、机会与威胁（SWOT）。
@@ -36,6 +38,8 @@ survey_task:
     以下是来自**用户的修改意见**：
     {feedback}
   expected_output: >
+    {output_language_instruction}
+
     一份调研报告,使用markdown格式进行写作，内容包括：
     1、市场上主要的类似软件项目列表及其相关信息。
     2、从核心功能、软件特征、软件外部实体等方面的对比分析。
@@ -71,6 +75,8 @@ draft_context_diagram_task:
     {survey}
     
   expected_output: >
+    {output_language_instruction}
+
     输出一段使用 Mermaid 语法绘制的上下文图（必须放在代码块中），内容应包含：
 
     - 使用 "flowchart TD" 或 "flowchart LR" 结构
@@ -110,6 +116,8 @@ user_introduction_draft_task:
     {reference}
 
   expected_output: >
+    {output_language_instruction}
+
     输出一份使用表格组织的用户全体报告，可以包括多个表格。
     对每个用户群体，表格需要包含以下内容：
       - 用户群体（User Group）
@@ -152,6 +160,8 @@ draft_event_list_task:
     {context_diagram}
    
   expected_output: >
+    {output_language_instruction}
+
     输出一个结构化的文本形式的事件列表，标明系统必须响应的外部事件.
     这是一个案例：
     化学品追踪系统的外部事件（External Events for Chemical Tracking System）
@@ -189,6 +199,8 @@ draft_feature_tree_task:
     
 
   expected_output: >
+    {output_language_instruction}
+
     你应该使用结构化的文本形式输出特征树，包含以下主要部分：
     1. 特征树主体：
        - 使用**缩进列表**表示层次结构。
@@ -211,6 +223,8 @@ business_requirements_document_task:
     {reference}
 
   expected_output: >
+    {output_language_instruction}
+
     你需要生成【一个且仅一个】章节的数据结构，用于表示业务需求文档中的一个完整章节。
 
     ===============================
@@ -375,6 +389,8 @@ nfr_task:
    
 
   expected_output: >
+    {output_language_instruction}
+
     按照markdown格式分条输出所有需要的质量保证。
     你可以把这些例子作为输出格式的参考：
     "系统应在当地时间上午9:00至10:00的高峰使用时段内，容纳总计400名用户，并支持最多100名并发用户，预计平均会话时长为8分钟。"
@@ -396,6 +412,8 @@ usage_scenario_task:
     {reference}
 
   expected_output: >
+    {output_language_instruction}
+
     输出一组结构化的使用场景列表，大约3-6个，
     你所输出的使用场景绝对不能包含用例中没有提到的角色，只能在用例已经有的范围内进行编写。
     使用场景应该包含如下结构:
@@ -470,6 +488,8 @@ use_case_draft_task:
     {reference}
     
   expected_output: >
+    {output_language_instruction}
+
     最终输出必须是有效的 JSON 风格字典（Python 字典格式也可以），
     且不得包含任何解释性文字。
     输出中必须只包含用例字典组成的列表，且可以直接写入文件。
@@ -519,6 +539,8 @@ state_transition_diagram_task:
 
 
   expected_output: >
+    {output_language_instruction}
+
     输出一段使用 Mermaid 语法绘制的状态转移图代码（必须放在代码块中），其内容应包含：
     - 使用 stateDiagram-v2 结构
     - 明确列出系统所有关键状态
@@ -591,6 +613,8 @@ erd_task:
     以下是你可以参考的**需求工件**：
     {reference}
   expected_output: >
+    {output_language_instruction}
+
     输出一份使用 Mermaid 语法绘制的 **实体关系图**，并置于代码块中。
     图表必须满足：
     - 使用 erDiagram 语法
@@ -707,6 +731,8 @@ data_flow_diagram_draft_task:
     {reference}
 
   expected_output: >
+    {output_language_instruction}
+
     输出一份使用 Mermaid 语法绘制的 **数据流图**（从LEVEL-0到Level-1），并置于代码块中。
     图表必须满足：
     - 使用 flowchart 语法（例如 "flowchart TD" 或 "flowchart LR"）
@@ -741,6 +767,8 @@ dialog_map_draft_task:
     {reference}
 
   expected_output: >
+    {output_language_instruction}
+
     输出一份使用 Mermaid 语法绘制的 **对话框映射（Dialog Map）**，并放置在代码块中。要求：
       - 使用 flowchart 语法（如 "flowchart TD" 或 "flowchart LR"）
       - 充分包含用例中的内容
@@ -819,6 +847,8 @@ data_dictionary_draft_task:
       {reference}
 
   expected_output: >
+    {output_language_instruction}
+
     输出一份完整的 **数据字典（Data Dictionary）**，数据字典应该按照表格方式组织,使用mermaid代码块包裹。
     输出必须包含：
     - 一个数据字段表格：汇总所有数据项，包括简单字段以及复合字段，每个数据项一行
@@ -902,6 +932,8 @@ SRS_planning_task:
     
 
   expected_output: >
+    {output_language_instruction}
+
     输出一个完整、独立、可复用的【章节写作提示词（Chapter Writing Prompt）】。
     你的思考过程不输出。
     该写作提示词必须明确包含以下内容：
@@ -941,6 +973,8 @@ SRS_draft_task:
     {chapter_reference}
 
   expected_output: >
+    {output_language_instruction}
+
     你需要生成【一个且仅一个】章节的数据结构，用于表示软件需求规格说明书（SRS）中的一个完整章节。
 
     ===============================
@@ -1118,7 +1152,7 @@ extract_document_skeleton_task:
     输出一份**章节结构骨架**，要求： 
     - 完整反映章节层级关系； 
     - 每个章节包含其下的子章节或结构块列表； 
-    - 内容上必须使用中文。
+    - {output_language_instruction}
     - 不包含业务中的具体内容； 
     - 结构清晰、层级正确、顺序一致； 
     - 可直接用于生成目录、模板或结构校验。 
@@ -1221,6 +1255,8 @@ artifact_planning_task:
     {artifact_to_choose}
 
   expected_output: >
+    {output_language_instruction}
+
     输出一个 Python 列表（list），其中的每个子列表（sub-list）代表对应章节所需的工件依赖。
     输出必须为合法的 Python 语法且不能包含额外注释。
     你的依赖输出应该以**大章**为单位，例如文档有十章就输出十个列表，不要为每个子章单独输出。
@@ -1274,6 +1310,8 @@ doc_content_task:
     {SRS_Document_Content}
 
   expected_output: >
+    {output_language_instruction}
+
     输出应为一个列表（List），列表中的每一个元素对应软件需求规约中的一个章节，
     列表中的元素应该对应一级标题而不需要考虑更详细的二级子标题。
     且顺序应与原文档章节顺序保持一致。
@@ -1335,6 +1373,8 @@ chapter_dependence_task:
  
 
   expected_output: >
+    {output_language_instruction}
+
     输出应为一个 Python 字典（dict），
     采用【反向邻接表（reverse adjacency list）】的形式来表示章节依赖关系。
 
@@ -1376,6 +1416,8 @@ fr_task:
     以下是相关的**需求工件**：
     {reference}
   expected_output: >
+    {output_language_instruction}
+
     输出一组结构化的功能需求（Functional Requirements, FR），
       每个需求应包含以下字段：
         - ID：唯一标识符，例如 FR-001、FR-002 等
@@ -1403,6 +1445,8 @@ BRD_modify_task:
     {reference}
      
   expected_output: >
+    {output_language_instruction}
+
     你的输出必须是一个 json格式的字典，其结构要求如下：
 
     - 字典的 key：所有已经输入需要被修改的需求工件代号
@@ -1457,6 +1501,8 @@ BRD_modify_locate_task:
       * 如果用户表示用例或者非功能性需求的某些方面有问题那么久进行对应的修改
 
   expected_output: >
+    {output_language_instruction}
+
     你的输出必须是一个列表，其内容为需要被修改的需求工件代号,代号使用双引号包裹
     同时你的输出不应该包含反引号
 
@@ -1505,6 +1551,8 @@ business_scope_task:
     以下是你可以参考的**需求工件**：
     {reference}
   expected_output: >
+    {output_language_instruction}
+
     你应该输出一份markdown格式的报告，包含上述章节.
   agent: SoftwareManager
 
@@ -1540,6 +1588,8 @@ doc_summary_task:
     对应得文件内容是:
     {value}
   expected_output: >
+    {output_language_instruction}
+
     你必须严格按照以下 JSON 格式输出，不要包含任何多余的解释文字：
     {
       "domain": "string | 参考领域标签：[财务, 技术, 法务, 市场, 人事, 战略, 产品, 其他]",

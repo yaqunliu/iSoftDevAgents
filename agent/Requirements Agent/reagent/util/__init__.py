@@ -1,4 +1,12 @@
 from util.util import *
+from util.lang_detect import (
+    apply_output_language_instruction,
+    detect_and_set_language,
+    detect_language,
+    get_detected_language,
+    get_output_language_instruction,
+    set_detected_language,
+)
 from util.DAG import *
 from util.Artifacts import *
 from util.validate_format import *
@@ -80,6 +88,8 @@ def run_with_retry(
     post_process_params=None,
 ):
     last_error = None
+
+    inputs = apply_output_language_instruction(inputs)
 
     for attempt in range(1, retries + 1):
         try:

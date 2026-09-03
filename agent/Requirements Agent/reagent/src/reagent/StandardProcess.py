@@ -324,7 +324,8 @@ def MetaAnalysisrun(doc_example_path, SRS_template = 'Initial', project_name = N
 
 
 def BRDevrun(project_name: str, Description: str, initial_phase: str = 'survey', execute = {'all': ''},  feedback_list = []):
-    
+
+    detect_and_set_language(Description)
     feedback = '本轮没有人类意见'
     while execute:
         BR_Initial_Template = get_br_Initial_Template(authors='csl')
@@ -469,6 +470,7 @@ def RequirementAnalysisrun(project_name,Description,artifact_planing):
     
 
 def StandardProcessrun(project_name, Description, srs_example_path, SRS_template):
+    detect_and_set_language(Description)
     document_template, document_skeleton, doc_planning, chapter_dependence, artifact_planing = MetaAnalysisrun(srs_example_path, SRS_template, Description=Description, project_name=project_name)
     RequirementElicitationrun(project_name, Description=Description)
     RequirementAnalysisrun(project_name,Description,artifact_planing)
