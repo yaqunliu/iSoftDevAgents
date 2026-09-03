@@ -3,7 +3,7 @@ FROM node:24-bookworm-slim AS build
 ARG NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
 ARG PNPM_FETCH_TIMEOUT=600000
 ARG PNPM_FETCH_RETRIES=5
-ARG PNPM_VERSION=8.15.5
+ARG PNPM_VERSION=10.25.0
 
 ENV PNPM_HOME="/pnpm" \
     PATH="/pnpm:${PATH}" \
@@ -12,8 +12,8 @@ ENV PNPM_HOME="/pnpm" \
     PNPM_FETCH_RETRIES=${PNPM_FETCH_RETRIES}
 
 # 原因注释：
-# 这份前端 workspace 目前使用的是 lockfileVersion 6，对应 pnpm 8。
-# 如果这里放任 corepack 自动拉最新 pnpm 10，Docker 构建会直接因为锁文件格式不兼容而失败。
+# 这份前端 workspace 目前使用的是 lockfileVersion 9，对应 pnpm 10。
+# 必须与本地生成 pnpm-lock.yaml 的版本保持一致，否则 --frozen-lockfile 会报格式不兼容。
 RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
 WORKDIR /app/frontend

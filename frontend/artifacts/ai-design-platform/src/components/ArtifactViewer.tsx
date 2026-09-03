@@ -345,10 +345,7 @@ export function ArtifactViewer({
       <div className="border-b border-white/10 bg-black/30 px-6 py-3">
         {isHistoricalVersion ? (
           <div className="mb-3 rounded-xl border border-cyan-500/20 bg-cyan-500/10 px-3 py-2 text-xs text-cyan-100">
-            {t("artifact.historicalVersionNotice", {
-              defaultValue: "当前看到的是历史版本 v{{version}}。如果在这里继续编辑，系统会创建一个新版本，不会覆盖旧记录。",
-              version: displayedVersion,
-            })}
+            {t("artifact.historicalVersionNotice", { version: displayedVersion })}
           </div>
         ) : null}
         <div className="flex flex-wrap items-center gap-2">

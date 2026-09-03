@@ -10,6 +10,7 @@ export type LineDiffRow =
       oldLineNumber: null;
       newLineNumber: null;
       content: string;
+      skippedCount: number;
     };
 
 function buildLcsTable(oldLines: string[], newLines: string[]): number[][] {
@@ -122,11 +123,13 @@ export function buildLineDiffRows(oldContent: string, newContent: string, contex
       continue;
     }
     if (previousKeptIndex !== null && index - previousKeptIndex > 1) {
+      const skippedCount = index - previousKeptIndex - 1;
       compactRows.push({
         kind: "skipped",
         oldLineNumber: null,
         newLineNumber: null,
-        content: `... 已省略 ${index - previousKeptIndex - 1} 行未改内容 ...`,
+        content: `... ${skippedCount} unchanged lines skipped ...`,
+        skippedCount,
       });
     }
     compactRows.push(rawRows[index]);

@@ -1370,7 +1370,7 @@ function TaskInsightCard({
 
       {expanded && (activeAgent || activePhase || agentOutputsReady.length) ? (
         <div className="mt-4 rounded-xl border border-white/5 bg-black/20 px-3 py-3">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{t("chat.activeAgent", { defaultValue: "Active Agent" })}</div>
+          <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{t("chat.activeAgent")}</div>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {activeAgent ? (
               <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-100">

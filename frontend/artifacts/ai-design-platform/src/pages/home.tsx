@@ -268,7 +268,7 @@ export default function Home() {
             <div className="hidden min-w-[220px] max-w-[320px] shrink min-w-0 items-center gap-3 rounded-full border border-white/10 bg-black/20 px-3 py-1.5 md:flex">
               <div className="min-w-0 flex-1 text-right">
               {/* 昵称是用户最常看的信息，所以给更高的显示优先级，并尽量保留完整内容。 */}
-                <div className="truncate text-sm font-medium text-foreground">{currentUser?.name ?? "当前用户"}</div>
+                <div className="truncate text-sm font-medium text-foreground">{currentUser?.name ?? t("home.currentUser")}</div>
                 <div className="truncate text-[11px] text-muted-foreground">{currentUser?.email ?? ""}</div>
               </div>
             {/* 头像强制固定宽高并禁止收缩，这样无论右侧空间怎样变化都能保持正圆。 */}
@@ -281,7 +281,7 @@ export default function Home() {
               onClick={() => void handleLogout()}
               isLoading={logout.isPending}
             >
-              退出
+              {t("home.logout")}
             </Button>
           </div>
         </div>
