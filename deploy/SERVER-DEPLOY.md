@@ -17,8 +17,8 @@
 | `docker-compose.yml` | **透传** `MAX_CONCURRENT_WORKFLOWS` / `AGENT_EXECUTOR_MAX_WORKERS` / `PG_POOL_MIN` / `PG_POOL_MAX` | 这几个是小内存机器的关键旋钮，代码里本来就支持环境变量，但 compose 没有透传，导致不管机器多小都按「8 个并发工作流 + 10 线程 + 10 条常驻 PG 连接」跑 |
 | `agent/platform/app/services/store.py:78` | 连接池 `min_size/max_size` 改为可配置 | 原来硬编码 `10/50`。每条连接对应一个 PostgreSQL 后端进程，常驻 10 条在 1.6G 机器上纯属浪费 |
 | `deploy/docker/web.Dockerfile` | 新增 `NODE_OPTIONS` 构建参数 | 给 V8 堆设上限，让 Rollup 到点就 GC，而不是一路涨到被 OOM killer 杀掉 |
-| `deploy/docker/backend.env.server.example` | 新增服务器专用 env 模板 | 镜像源改回官方源（机器在海外，国内镜像会超时）、端口改 80、强制改数据库口令、**按 1.6G 内存预设并发旋钮** |
-| `deploy/docker/run-server.sh` | 新增服务器部署入口 | 显式 `--env-file`，带启动前检查，不依赖 shell 是否 export 过变量 |
+| `.env.server.example` | 新增服务器专用 env 模板 | 镜像源改回官方源（机器在海外，国内镜像会超时）、端口改 80、强制改数据库口令、**按 1.6G 内存预设并发旋钮** |
+| `deploy/docker/run-server.sh` | 新增部署辅助脚本（**可选**） | 只做启动前检查；配好 `.env` 后直接 `docker compose up -d --build` 即可，不需要这个脚本 |
 
 所有默认值都保持和改动前一致，**本地开发流程（`run-local.sh` + 清华镜像 + arm64 + 8 并发）未受任何影响**。低内存配置只通过服务器的 env 文件生效。
 
@@ -39,6 +39,8 @@ rsync -avz --delete \
   --exclude '__pycache__' \
   --exclude '*.pyc' \
   --exclude '.pytest_cache' \
+  --exclude '.env' \
+  --exclude 'deploy/docker/backend.env' \
   --exclude 'agent/platform/data' \
   --exclude 'agent/platform/log' \
   --exclude 'frontend/artifacts/ai-design-platform/dist' \
@@ -161,9 +163,23 @@ apt-get install -y iptables-persistent && netfilter-persistent save
 
 ```bash
 cd /root/iSoftDevAgents
-cp deploy/docker/backend.env.server.example deploy/docker/backend.env
-chmod 600 deploy/docker/backend.env
+cp .env.server.example .env
+chmod 600 .env
 ```
+
+### 为什么文件名必须是 `.env`
+
+`docker compose` 会**自动读取 compose 文件所在目录下的 `.env`**，用它填充 `docker-compose.yml` 里的 `${VAR}` 插值。所以只要文件叫 `.env` 且放在仓库根目录，后面所有命令都可以是干净的：
+
+```bash
+docker compose up -d --build      # 不需要 --env-file
+```
+
+三点注意：
+
+- **不会和后端自己的配置打架。** 后端进程读的是 `agent/platform/.env` 和 `agent/platform/.env.local`（见 `app/config.py:39`），根目录这个 `.env` 只服务于 compose 的变量插值，两者互不干扰。
+- **别在你 Mac 的仓库根目录建 `.env`。** compose 在本地同样会自动读它，会把你本地开发也切成 80 端口 + 官方源 + 低内存并发配置。服务器专用的东西只留在服务器上。
+- **rsync 必须排除 `.env`。** 第 1 步的命令带 `--delete`，如果不排除，每次同步都会把服务器上的 `.env` 删掉。上面的 rsync 已经加了 `--exclude '.env'`。
 
 ### 3.1 必须改的两处（不改起不来）
 
@@ -176,7 +192,7 @@ openssl rand -hex 24
 把输出填进两个地方，**两处必须一致**：
 
 ```bash
-vi deploy/docker/backend.env
+vi .env
 ```
 
 ```bash
@@ -188,9 +204,9 @@ DATABASE_URL=postgresql://isoftdev:<刚生成的口令>@postgres:5432/isoftdev
 
 ```bash
 PGPASS=$(openssl rand -hex 24)
-sed -i "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=${PGPASS}|" deploy/docker/backend.env
-sed -i "s|^DATABASE_URL=.*|DATABASE_URL=postgresql://isoftdev:${PGPASS}@postgres:5432/isoftdev|" deploy/docker/backend.env
-grep -E '^(POSTGRES_PASSWORD|DATABASE_URL)=' deploy/docker/backend.env
+sed -i "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=${PGPASS}|" .env
+sed -i "s|^DATABASE_URL=.*|DATABASE_URL=postgresql://isoftdev:${PGPASS}@postgres:5432/isoftdev|" .env
+grep -E '^(POSTGRES_PASSWORD|DATABASE_URL)=' .env
 ```
 
 ### 3.2 LLM Key（本次先占位）
@@ -206,7 +222,7 @@ grep -E '^(POSTGRES_PASSWORD|DATABASE_URL)=' deploy/docker/backend.env
 
 ```bash
 cd /root/iSoftDevAgents
-sed -i 's|^ISOFTDEVAGENTS_LLM_API_KEY=.*|ISOFTDEVAGENTS_LLM_API_KEY=你的真实key|' deploy/docker/backend.env
+sed -i 's|^ISOFTDEVAGENTS_LLM_API_KEY=.*|ISOFTDEVAGENTS_LLM_API_KEY=你的真实key|' .env
 ./deploy/docker/run-server.sh restart-backend
 ```
 
@@ -218,7 +234,7 @@ sed -i 's|^ISOFTDEVAGENTS_LLM_API_KEY=.*|ISOFTDEVAGENTS_LLM_API_KEY=你的真实
 
 ```bash
 grep -E '^(ISOFTDEVAGENTS_MAX_CONCURRENT_WORKFLOWS|ISOFTDEVAGENTS_AGENT_EXECUTOR_MAX_WORKERS|ISOFTDEVAGENTS_PG_POOL_MIN|ISOFTDEVAGENTS_PG_POOL_MAX|WEB_BUILD_NODE_OPTIONS)=' \
-  deploy/docker/backend.env
+  .env
 ```
 
 期望输出：
@@ -243,9 +259,7 @@ WEB_BUILD_NODE_OPTIONS=--max-old-space-size=1536
 
 ```bash
 cd /root/iSoftDevAgents
-ENVF="--env-file deploy/docker/backend.env"
-
-docker compose $ENVF build backend
+docker compose build backend
 ```
 
 装的是 crewai[tools] 全家桶（onnxruntime / pyarrow / lancedb / chromadb 等,都是预编译 wheel,不用现场编译）。**预计 10–25 分钟**,镜像约 2.5–3.5GB。
@@ -253,7 +267,7 @@ docker compose $ENVF build backend
 ### 4.2 再构建前端
 
 ```bash
-docker compose $ENVF build web
+docker compose build web
 ```
 
 这一步是内存风险最高的地方（~1000 个 npm 包 + Rollup 打包）。**预计 15–40 分钟**,2 核 + swap 会比较慢,耐心等,中途别 Ctrl-C。
@@ -269,11 +283,18 @@ watch -n 2 free -h
 ### 4.3 启动
 
 ```bash
-docker compose $ENVF up -d
-./deploy/docker/run-server.sh ps
+docker compose up -d
+docker compose ps
 ```
 
-> 之后的日常更新可以直接用 `./deploy/docker/run-server.sh up`（等于 `up -d --build`）。分步只是为了首次构建更稳。
+> **之后的日常更新一条命令就够：**
+>
+> ```bash
+> cd /root/iSoftDevAgents && docker compose up -d --build
+> ```
+>
+> `docker compose` 会自动读取仓库根目录的 `.env` 做变量插值，不需要 `--env-file`。
+> 上面分两步只是首次构建时为了避开内存峰值叠加，不是常态。
 
 ---
 
@@ -283,17 +304,17 @@ docker compose $ENVF up -d
 
 ```bash
 # 1. 三个容器都在，backend 应该是 healthy
-docker compose --env-file deploy/docker/backend.env ps
+docker compose ps
 
 # 2. 后端健康检查（服务器本机）
 curl -s http://127.0.0.1:9010/api/healthz
 
 # 3. 数据库建表成功（应该看到 17 张表）
-docker compose --env-file deploy/docker/backend.env exec postgres \
+docker compose exec postgres \
   psql -U isoftdev -d isoftdev -c '\dt'
 
 # 4. Alembic 迁移跑过了
-docker compose --env-file deploy/docker/backend.env logs backend --tail=300 \
+docker compose logs backend --tail=300 \
   | grep -iE "alembic|STARTUP"
 
 # 5. Nginx 经内网转发到后端（走 web 容器）
@@ -317,11 +338,9 @@ http://79.108.225.95/
 
 ```bash
 cd /root/iSoftDevAgents
-ENVF="--env-file deploy/docker/backend.env"
-
-docker compose $ENVF logs backend  --tail=200
-docker compose $ENVF logs web      --tail=100
-docker compose $ENVF logs postgres --tail=50
+docker compose logs backend  --tail=200
+docker compose logs web      --tail=100
+docker compose logs postgres --tail=50
 ```
 
 ### 常见故障对照
@@ -441,7 +460,7 @@ cd /root/iSoftDevAgents && ./deploy/docker/run-server.sh up
 
 | 数据 | 位置 | 备份方式 |
 |---|---|---|
-| 业务数据（17 张表：项目/消息/产物/代码文件/版本…） | Docker 卷 `pgdata` | `docker compose $ENVF exec postgres pg_dump -U isoftdev isoftdev > backup.sql` |
+| 业务数据（17 张表：项目/消息/产物/代码文件/版本…） | Docker 卷 `pgdata` | `docker compose exec postgres pg_dump -U isoftdev isoftdev > backup.sql` |
 | 上传文件、Agent 调试包 | 宿主机 `/root/iSoftDevAgents/agent/platform/data` | 直接 tar |
 | LLM 调试日志 | 宿主机 `/root/iSoftDevAgents/agent/platform/log` | 会持续增长,注意清理 |
 

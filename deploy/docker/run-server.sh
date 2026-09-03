@@ -1,13 +1,21 @@
 #!/bin/sh
 #
 # 教学注释：
-# 这是「单机服务器正式部署」入口，和本地测试用的 run-local.sh 分开。
-# 两者的差别：
-# 1. 这里显式用 --env-file 把 deploy/docker/backend.env 交给 docker compose，
-#    不依赖当前 shell 是否 export 过变量，重启服务器后行为一致。
-# 2. 这里不关 BuildKit。run-local.sh 关掉是为了绕开本机的构建缓存损坏问题，
-#    服务器上开着 BuildKit 缓存命中更好。
-# 3. 这里会先做几项启动前检查，避免带着占位密钥、缺目录的状态跑起来。
+# 这是「单机服务器正式部署」的可选辅助脚本。
+#
+# 重要：你完全可以不用它。配置好根目录的 .env 之后，
+# 直接在仓库根目录执行下面这条就够了：
+#
+#     docker compose up -d --build
+#
+# docker compose 会自动读取 compose 文件同目录下的 .env 做变量插值，
+# 不需要 --env-file。
+#
+# 这个脚本存在的唯一价值是「启动前检查」：
+# 1. 确认 .env 存在
+# 2. 预建 bind mount 的宿主目录，避免 Docker 用 root 属主创建后你在宿主机读不了日志
+# 3. 拦住"忘了改数据库默认口令"这种会把弱口令库挂到公网的情况
+# 4. 提醒 LLM Key 还是占位值
 
 set -eu
 
@@ -16,11 +24,11 @@ REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)
 
 cd "$REPO_ROOT"
 
-ENV_FILE="$REPO_ROOT/deploy/docker/backend.env"
+ENV_FILE="$REPO_ROOT/.env"
 
 if [ ! -f "$ENV_FILE" ]; then
   echo "ERROR: 缺少 $ENV_FILE" >&2
-  echo "请先执行：cp deploy/docker/backend.env.server.example deploy/docker/backend.env" >&2
+  echo "请先执行：cp .env.server.example .env" >&2
   echo "然后把里面的占位值改成真实值。" >&2
   exit 1
 fi
@@ -35,7 +43,7 @@ mkdir -p "$REPO_ROOT/agent/platform/data" "$REPO_ROOT/agent/platform/log"
 # 数据库口令沿用模板里的占位值，等于公网上一台带弱口令的库。
 # 这里直接拦住，不给"忘了改"留机会。
 if grep -q '^POSTGRES_PASSWORD=CHANGE-ME-strong-password' "$ENV_FILE"; then
-  echo "ERROR: $ENV_FILE 里的 POSTGRES_PASSWORD 还是模板占位值。" >&2
+  echo "ERROR: .env 里的 POSTGRES_PASSWORD 还是模板占位值。" >&2
   echo "请改成你自己的强口令，并同步改 DATABASE_URL 里的同一个密码。" >&2
   exit 1
 fi
@@ -51,26 +59,24 @@ if grep -q '^ISOFTDEVAGENTS_LLM_API_KEY=REPLACE-WITH-YOUR-REAL-KEY' "$ENV_FILE";
   echo "" >&2
 fi
 
-COMPOSE="docker compose --env-file $ENV_FILE"
-
 case "${1:-up}" in
   up)
-    exec $COMPOSE up -d --build
+    exec docker compose up -d --build
     ;;
   logs)
-    exec $COMPOSE logs -f --tail=200
+    exec docker compose logs -f --tail=200
     ;;
   ps)
-    exec $COMPOSE ps
+    exec docker compose ps
     ;;
   restart-backend)
-    # 教学注释：改完 env 里的 Key 之后只需要重建 backend，不用动前端和数据库。
-    exec $COMPOSE up -d --no-deps --force-recreate backend
+    # 教学注释：改完 .env 里的 Key 之后只需要重建 backend，不用动前端和数据库。
+    exec docker compose up -d --no-deps --force-recreate backend
     ;;
   down)
-    exec $COMPOSE down
+    exec docker compose down
     ;;
   *)
-    exec $COMPOSE "$@"
+    exec docker compose "$@"
     ;;
 esac
