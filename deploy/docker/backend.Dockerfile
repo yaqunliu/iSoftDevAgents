@@ -36,6 +36,12 @@ RUN python -c "from pathlib import Path; import tomllib; payload = tomllib.loads
     && .venv/bin/pip install --no-cache-dir -r /tmp/platform-direct-requirements.txt
 
 # 原因注释：
+# TestAgent 的 `tools/run_py_test.py` 会用 `python -m pytest` 真正执行生成出来的测试。
+# pytest 只在 pyproject 的 dev 依赖组里，上面那步不会装它，
+# 结果就是容器里测试阶段必然失败。这里显式补上运行期需要的 pytest。
+RUN .venv/bin/pip install --no-cache-dir "pytest>=8.4,<9"
+
+# 原因注释：
 # 当前 `agent/requirements.txt` 同时混入了多代 CrewAI 与相关依赖，
 # 直接硬装进同一个运行环境会触发大量版本冲突。
 # 为了让 Docker 更接近本地“共享一个可运行环境”的模式，

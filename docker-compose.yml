@@ -9,7 +9,11 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "${ISOFTDEVAGENTS_PG_PORT:-5432}:5432"
+      # 安全注释：
+      # 默认只绑定回环地址。公网机器上把 5432 直接暴露出去，
+      # 等于把带默认口令的数据库挂到互联网上。
+      # 真的需要远程连库时，再把 ISOFTDEVAGENTS_PG_BIND_HOST 显式改成 0.0.0.0。
+      - "${ISOFTDEVAGENTS_PG_BIND_HOST:-127.0.0.1}:${ISOFTDEVAGENTS_PG_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U isoftdev"]
       interval: 5s
@@ -29,7 +33,10 @@ services:
         UV_HTTP_TIMEOUT: ${UV_HTTP_TIMEOUT:-600}
     restart: unless-stopped
     ports:
-      - "${ISOFTDEVAGENTS_BACKEND_PORT:-9010}:9010"
+      # 安全注释：
+      # 前端是通过 web 容器里的 Nginx 走 Docker 内网访问 backend 的，
+      # 这里发布端口只是为了本机调试方便，所以默认同样只绑回环地址。
+      - "${ISOFTDEVAGENTS_BACKEND_BIND_HOST:-127.0.0.1}:${ISOFTDEVAGENTS_BACKEND_PORT:-9010}:9010"
     environment:
       # 接口注释：
       # 这里统一从宿主机环境读取值；本地可以走 deploy/docker/run-local.sh，

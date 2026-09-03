@@ -31,10 +31,30 @@ COPY frontend/scripts/package.json /app/frontend/scripts/package.json
 RUN pnpm install --frozen-lockfile
 
 # 原因注释：
-# 在当前 Docker arm64 环境下，pnpm 有时不会把 Rollup / esbuild 的可选原生包完整落盘。
-# 这会导致 `vite build` 阶段直接报找不到 `@rollup/rollup-linux-arm64-gnu`。
+# pnpm 有时不会把 Rollup / esbuild / lightningcss / tailwind-oxide 的可选原生包完整落盘。
+# 这会导致 `vite build` 阶段直接报找不到 `@rollup/rollup-linux-<arch>-gnu`。
 # 这里继续用 pnpm 自己补装当前平台需要的几个二进制包，避免混用 npm 把 workspace 状态弄乱。
-RUN pnpm add -Dw @rollup/rollup-linux-arm64-gnu@4.60.0 @esbuild/linux-arm64@0.27.4 lightningcss-linux-arm64-gnu@1.32.0 @tailwindcss/oxide-linux-arm64-gnu@4.2.2
+#
+# 设计注释：
+# 补装的包名带死架构后缀，所以必须按当前构建架构分支。
+# 之前这里写死了 arm64（本机 Mac 调通的形态），
+# 在 x86_64 服务器上构建时 pnpm 会因为 os/cpu 不匹配直接失败。
+# x64 分支的版本号对齐 pnpm-lock.yaml 里已有的 optional 依赖版本。
+RUN set -eux; \
+    build_arch="$(dpkg --print-architecture)"; \
+    if [ "$build_arch" = "arm64" ]; then \
+      pnpm add -Dw \
+        @rollup/rollup-linux-arm64-gnu@4.60.0 \
+        @esbuild/linux-arm64@0.27.4 \
+        lightningcss-linux-arm64-gnu@1.32.0 \
+        @tailwindcss/oxide-linux-arm64-gnu@4.2.2; \
+    else \
+      pnpm add -Dw \
+        @rollup/rollup-linux-x64-gnu@4.60.1 \
+        @esbuild/linux-x64@0.27.7 \
+        lightningcss-linux-x64-gnu@1.32.0 \
+        @tailwindcss/oxide-linux-x64-gnu@4.2.2; \
+    fi
 
 COPY frontend /app/frontend
 
