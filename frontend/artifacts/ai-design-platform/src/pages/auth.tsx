@@ -5,6 +5,7 @@ import { Loader2, LogIn, UserPlus } from "lucide-react";
 import { Button, Input } from "@/components/ui";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { useCurrentUser, useLogin, useRegister } from "@/hooks/use-api";
+import { resolveAppNextPath } from "@/lib/app-routes";
 
 type AuthMode = "login" | "register";
 
@@ -12,15 +13,18 @@ function isValidEmail(value: string): boolean {
   return value.includes("@");
 }
 
+/**
+ * 读取 next 参数并收敛成安全的应用内路径。
+ *
+ * 原因注释：兜底和校验都挪到了 lib/app-routes.ts 里的 resolveAppNextPath，
+ * 因为官网占用了 "/" 之后，"回跳到 /" 会把登录成功的用户送到营销页。
+ * 那个函数还顺手补了开放重定向的防护（"//evil.com" 这类），并且有单测覆盖。
+ */
 function resolveNextPath(): string {
   if (typeof window === "undefined") {
-    return "/";
+    return resolveAppNextPath(null);
   }
-  const next = new URLSearchParams(window.location.search).get("next");
-  if (!next || !next.startsWith("/")) {
-    return "/";
-  }
-  return next;
+  return resolveAppNextPath(new URLSearchParams(window.location.search).get("next"));
 }
 
 export default function AuthPage() {

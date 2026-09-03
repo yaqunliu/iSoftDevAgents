@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { TerminalSquare, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui";
+import { APP_HOME_PATH } from "@/lib/app-routes";
 
 export default function NotFound() {
   const { t } = useTranslation();
@@ -13,7 +14,7 @@ export default function NotFound() {
         <p className="text-muted-foreground mb-8">
           {t("notFound.description")}
         </p>
-        <Link href="/">
+        <Link href={APP_HOME_PATH}>
           <Button size="lg" className="w-full">
             <TerminalSquare className="w-4 h-4 mr-2" />
             {t("notFound.returnHome")}

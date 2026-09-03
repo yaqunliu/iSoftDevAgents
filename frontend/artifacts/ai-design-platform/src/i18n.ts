@@ -1,6 +1,7 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import { extraLocaleResources } from "./lib/i18n-extra-locales.ts";
+import { landingLocaleResources } from "./lib/i18n-landing-locales.ts";
 import { extraModuleTranslations } from "./lib/module-translations-extra.ts";
 import { normalizeSupportedLocale } from "./lib/locale.ts";
 
@@ -1048,9 +1049,24 @@ const resources = {
 } as const;
 export const baseLocaleResources = resources;
 
+/**
+ * 设计注释：
+ * 官网文案（lp.* 前缀）只提供英文，合并进 en 的 translation 命名空间。
+ * 官网面向国际市场，英文是主语言；上面已经配了 fallbackLng: "en"，
+ * 所以用户即使把界面切成中文或日文，官网也会稳定回落到英文，
+ * 不会露出未翻译的 translation key。
+ * 以后要补语言，只需在 i18n-landing-locales.ts 里按 locale 追加，
+ * 这里再加一条同样形状的合并即可，组件一行都不用改。
+ */
 const localizedResources = {
   ...resources,
   ...extraLocaleResources,
+  en: {
+    translation: {
+      ...resources.en.translation,
+      ...landingLocaleResources.en,
+    },
+  },
 } as const;
 
 const storedLanguage =

@@ -20,6 +20,7 @@ import {
   readPendingProjectGeneration,
 } from "@/lib/pending-project-generation";
 import { toast } from "@/hooks/use-toast";
+import { APP_HOME_PATH } from "@/lib/app-routes";
 
 export default function ProjectPage() {
   const { t } = useTranslation();
@@ -152,7 +153,7 @@ export default function ProjectPage() {
           <h1 className="text-2xl font-semibold text-foreground">{t("notFound.title")}</h1>
           <p className="mt-3 text-sm text-muted-foreground">{t("notFound.description")}</p>
           <div className="mt-6 flex justify-center">
-            <Link href="/">
+            <Link href={APP_HOME_PATH}>
               <Button>
                 <ChevronLeft className="w-4 h-4 mr-2" />
                 {t("notFound.returnHome")}
@@ -171,7 +172,7 @@ export default function ProjectPage() {
       <div className="w-[40%] min-w-[400px] max-w-[600px] flex flex-col border-r border-white/10 bg-[#0a0a0a] z-10 shadow-2xl">
         {/* Header */}
         <header className="h-14 flex items-center px-4 border-b border-white/10 shrink-0 bg-background/80 backdrop-blur-md">
-          <Link href="/">
+          <Link href={APP_HOME_PATH}>
             <button className="p-2 -ml-2 mr-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-white/5 transition-colors">
               <ChevronLeft className="w-5 h-5" />
             </button>
