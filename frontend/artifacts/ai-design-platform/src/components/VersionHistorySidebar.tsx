@@ -140,7 +140,7 @@ function ChangeDiffDetail({
         {rows.map((row, index) => (
           row.kind === "skipped" ? (
             <div key={`skip-${index}`} className="border-t border-white/5 bg-white/[0.03] px-3 py-2 text-slate-500">
-              {row.content}
+              {t("history.skippedLines", { count: row.skippedCount })}
             </div>
           ) : (
             <div

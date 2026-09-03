@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Expand, Minus, Plus, RotateCcw } from "lucide-react";
 
@@ -82,6 +83,7 @@ function loadMermaidRuntime(): Promise<MermaidRuntime> {
 }
 
 export function MermaidDiagram({ chart, className }: MermaidDiagramProps) {
+  const { t } = useTranslation();
   const diagramId = useId().replace(/:/g, "-");
   const [svgMarkup, setSvgMarkup] = useState<string>("");
   const [renderError, setRenderError] = useState<string | null>(null);
@@ -134,7 +136,7 @@ export function MermaidDiagram({ chart, className }: MermaidDiagramProps) {
           Mermaid Diagram Source
         </div>
         <div className="px-4 py-3 text-xs text-amber-100/80">
-          图表语法暂时无法渲染，下面保留原始 Mermaid 内容，方便继续排查。
+          {t("mermaid.renderErrorHint")}
         </div>
         <pre className="overflow-x-auto border-t border-amber-500/10 px-5 py-4 text-sm leading-7 text-slate-200">
           <code>{chart}</code>
@@ -146,7 +148,7 @@ export function MermaidDiagram({ chart, className }: MermaidDiagramProps) {
   if (!svgMarkup) {
     return (
       <div className={cn("mt-6 rounded-2xl border border-cyan-500/20 bg-cyan-500/5 px-5 py-8 text-center text-sm text-cyan-100/80", className)}>
-        正在渲染 Mermaid 图表…
+        {t("mermaid.rendering")}
       </div>
     );
   }

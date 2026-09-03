@@ -240,6 +240,7 @@ function CodeTree({
   expandedFolders,
   onToggleFolder,
   draftPaths,
+  t,
   currentPath = "",
   level = 0,
 }: {
@@ -249,6 +250,7 @@ function CodeTree({
   expandedFolders: CodeTreeExpandedState;
   onToggleFolder: (folderPath: string) => void;
   draftPaths: Set<string>;
+  t: ReturnType<typeof useTranslation>["t"];
   currentPath?: string;
   level?: number;
 }) {
@@ -278,6 +280,7 @@ function CodeTree({
                   expandedFolders={expandedFolders}
                   onToggleFolder={onToggleFolder}
                   draftPaths={draftPaths}
+                  t={t}
                   currentPath={folderPath}
                   level={level + 1}
                 />
@@ -303,7 +306,7 @@ function CodeTree({
             <span className="truncate">{node.name}</span>
             {node.path && draftPaths.has(node.path) ? (
               <span className="ml-auto rounded-full border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-200">
-                草稿
+                {t("code.draftBadge")}
               </span>
             ) : null}
           </button>
@@ -362,7 +365,7 @@ function DocTree({
                     <span className="truncate">{item.fileName}</span>
                     {item.hasDraft ? (
                       <span className="ml-auto rounded-full border border-amber-500/20 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-200">
-                        草稿
+                        {t("code.draftBadge")}
                       </span>
                     ) : null}
                   </button>
@@ -766,8 +769,11 @@ export function CodeWorkspaceSheet({
     });
     onVersionChange(result.newVersion);
     toast({
-      title: "已提交当前修改",
-      description: `已创建版本 v${result.newVersion}，共提交 ${result.committedPaths.length} 个文件。`,
+      title: t("code.commitSuccessTitle"),
+      description: t("code.commitSuccessDescription", {
+        version: result.newVersion,
+        count: result.committedPaths.length,
+      }),
     });
   };
 
@@ -846,7 +852,7 @@ export function CodeWorkspaceSheet({
                     onClick={() => void handleCommitDrafts()}
                     isLoading={commitProjectDrafts.isPending}
                   >
-                    提交当前修改 ({projectDraftCount})
+                    {t("code.commitDrafts", { count: projectDraftCount })}
                   </Button>
                 ) : null}
                 <Button
@@ -933,6 +939,7 @@ export function CodeWorkspaceSheet({
                           onSelect={setSelectedFilePath}
                           expandedFolders={expandedCodeFolders}
                           draftPaths={workspaceDraftPaths}
+                          t={t}
                           onToggleFolder={(folderPath) =>
                             setExpandedCodeFolders((current) => ({
                               ...current,
@@ -968,7 +975,7 @@ export function CodeWorkspaceSheet({
                         ) : null}
                         {projectFile?.hasDraft ? (
                           <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-200">
-                            草稿
+                            {t("code.draftBadge")}
                           </Badge>
                         ) : null}
                         {codeFile ? (
@@ -1022,7 +1029,7 @@ export function CodeWorkspaceSheet({
                         ) : null}
                         {projectFile?.hasDraft ? (
                           <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-200">
-                            草稿
+                            {t("code.draftBadge")}
                           </Badge>
                         ) : null}
                         {selectedDoc?.isEditable ? (
