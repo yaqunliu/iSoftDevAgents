@@ -280,21 +280,164 @@ watch -n 2 free -h
 
 看到 Swap 被吃掉一两 G 是正常的;只要没出现 `Killed` 就是在正常推进。
 
-### 4.3 启动
+### 4.3 分三阶段启动：数据库 → 后端 → 前端
+
+服务一共三个，**必须按这个顺序**。compose 里已经用 `depends_on: condition: service_healthy` 强制了依赖，所以哪怕直接 `up -d` 顺序也是对的；下面分阶段是为了每一层都能单独确认，出问题定位快。
+
+`--no-deps` 的作用是「只起这一个，别自动把依赖拉起来」，这样才是真正的一个一个起。
+
+---
+
+#### 阶段 1：数据库
 
 ```bash
-docker compose up -d
+cd /root/iSoftDevAgents
+docker compose up -d postgres
+```
+
+postgres 用的是现成镜像 `postgres:16-alpine`，**不需要 build**（所以它从来没在前面的构建输出里出现过）。
+
+等它变成 healthy —— `pg_isready` 通过之前不要往下走：
+
+```bash
+# 轮询直到 healthy，通常 5~15 秒
+until [ "$(docker inspect -f '{{.State.Health.Status}}' \
+  "$(docker compose ps -q postgres)")" = "healthy" ]; do
+  echo "waiting for postgres..."; sleep 2
+done
+echo "postgres is healthy"
+```
+
+确认库和账号已就绪：
+
+```bash
+docker compose exec postgres psql -U isoftdev -d isoftdev -c 'SELECT version();'
+docker compose exec postgres psql -U isoftdev -d isoftdev -c '\dt'
+```
+
+此刻 `\dt` 应该返回 **`Did not find any relations.`** —— 空库是**正常的**。建表是后端启动时才做的，见下一阶段。
+
+---
+
+#### 阶段 2：后端（建表就发生在这一步）
+
+```bash
+docker compose up -d --no-deps backend
+docker compose logs -f backend
+```
+
+日志里按顺序应该看到：
+
+```text
+INFO  [STARTUP] Alembic migration completed (upgrade to head)
+INFO  Requirements Agent runtime: bridge_mode=... enabled=True ...
+INFO  Application startup complete.
+INFO  Uvicorn running on http://0.0.0.0:9010
+```
+
+看到 `Application startup complete.` 就 Ctrl-C 退出日志跟随（不会停容器）。
+
+确认表建好了：
+
+```bash
+docker compose exec postgres psql -U isoftdev -d isoftdev -c '\dt'
+```
+
+**应该看到 18 张表** = 17 张业务表 + alembic 自己的 `alembic_version`。
+
+再确认健康检查和迁移版本：
+
+```bash
+curl -s http://127.0.0.1:9010/api/healthz
+docker compose exec postgres psql -U isoftdev -d isoftdev \
+  -c 'SELECT * FROM alembic_version;'          # 期望 001
+```
+
+等 backend 变成 healthy 再起前端（`web` 的 `depends_on` 要求 backend healthy）：
+
+```bash
+until [ "$(docker inspect -f '{{.State.Health.Status}}' \
+  "$(docker compose ps -q backend)")" = "healthy" ]; do
+  echo "waiting for backend..."; sleep 3
+done
+echo "backend is healthy"
+```
+
+> backend 的 healthcheck 有 `start_period: 30s`，所以前 30 秒显示 `starting` 是正常的。
+
+---
+
+#### 阶段 3：前端
+
+```bash
+docker compose up -d --no-deps web
 docker compose ps
 ```
 
-> **之后的日常更新一条命令就够：**
+三个服务都应该是 `Up`，postgres 和 backend 带 `(healthy)`。
+
+---
+
+> **之后的日常更新不用分阶段，一条命令就够：**
 >
 > ```bash
 > cd /root/iSoftDevAgents && docker compose up -d --build
 > ```
 >
-> `docker compose` 会自动读取仓库根目录的 `.env` 做变量插值，不需要 `--env-file`。
-> 上面分两步只是首次构建时为了避开内存峰值叠加，不是常态。
+> `docker compose` 会自动读取仓库根目录的 `.env` 做变量插值，不需要 `--env-file`；
+> `depends_on` 会保证 `postgres → backend → web` 的启动顺序。
+
+---
+
+### 4.4 数据库是怎么初始化的（不需要手动做任何事）
+
+**结论先说：不需要 `psql` 手动建库、不需要手动跑 `alembic upgrade`。** 后端启动时自己完成，且幂等。
+
+`app/main.py` 的 `startup_event` 里是两层：
+
+| 顺序 | 动作 | 代码位置 |
+|---|---|---|
+| 1 | `store.initialize(dsn)` → `_create_schema()`，执行 **17 条 `CREATE TABLE IF NOT EXISTS`** | `app/services/store.py:88` |
+| 2 | `alembic upgrade head`，跑 `001_initial_schema` 并写入 `alembic_version` | `app/main.py:3719` |
+
+两层建的表**完全一致**（已逐个比对，17 张，无差异），而且 alembic 迁移里也全是 `CREATE TABLE IF NOT EXISTS`。所以：
+
+- **新库**：第 1 层建表 → 第 2 层空跑一遍并把版本号打到 `001`
+- **旧库**：两层都是 no-op，不会破坏已有数据
+- **重启**：随便重启多少次都安全
+
+数据库本身（`isoftdev` 库 + `isoftdev` 账号）由 `postgres:16-alpine` 镜像在**卷首次初始化时**自动创建，参数来自 compose 里的 `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD`。
+
+#### ⚠️ 一个必须知道的坑：改密码对已存在的卷无效
+
+`POSTGRES_PASSWORD` **只在 `pgdata` 卷第一次初始化时生效**。这是 postgres 官方镜像的行为，不是这个项目的问题。
+
+也就是说，如果你**之前已经用别的密码起过一次 postgres**，现在改了 `.env` 里的密码：
+
+- 卷里的 `isoftdev` 账号仍是**旧密码**
+- backend 拿新密码去连 → 认证失败 → 容器反复重启
+- 日志里是 `password authentication failed for user "isoftdev"`
+
+**怎么判断卷是不是已经存在：**
+
+```bash
+docker volume ls | grep pgdata
+```
+
+**处理办法（二选一）：**
+
+```bash
+# 方案 1：库里还没有你在意的数据 —— 直接删卷重来（数据会全部丢失）
+docker compose down -v
+docker compose up -d postgres
+
+# 方案 2：库里已有数据要保 —— 改数据库里的密码去匹配 .env
+docker compose exec postgres psql -U isoftdev -d isoftdev \
+  -c "ALTER USER isoftdev WITH PASSWORD '你在 .env 里写的那个密码';"
+docker compose up -d --force-recreate backend
+```
+
+> `down -v` 里的 `-v` 是删卷,**会清空整个数据库**。不带 `-v` 的 `down` 只停容器,数据保留。别手滑。
 
 ---
 
@@ -309,7 +452,7 @@ docker compose ps
 # 2. 后端健康检查（服务器本机）
 curl -s http://127.0.0.1:9010/api/healthz
 
-# 3. 数据库建表成功（应该看到 17 张表）
+# 3. 数据库建表成功（应该看到 18 张表 = 17 业务表 + alembic_version）
 docker compose exec postgres \
   psql -U isoftdev -d isoftdev -c '\dt'
 
@@ -353,6 +496,8 @@ docker compose logs postgres --tail=50
 | Agent 生成极慢(几十分钟) | 内存不够,在持续换页 | `free -h` 看 swap 用量。这是 1.6G 机器的固有代价,升到 4G 可解 |
 | 后端构建卡在下载依赖 | 镜像源指向国内 | 确认 env 里 `PIP_INDEX_URL=https://pypi.org/simple` |
 | `backend` 一直 unhealthy | 连不上数据库 | 确认 `POSTGRES_PASSWORD` 和 `DATABASE_URL` 里的密码**完全一致** |
+| 日志报 `password authentication failed for user "isoftdev"` | `pgdata` 卷是用旧密码初始化的，改 `.env` 对已存在的卷无效 | 见 4.4 节「改密码对已存在的卷无效」 |
+| `\dt` 返回 `Did not find any relations.` | 只起了 postgres，还没起 backend | 建表发生在 backend 启动时，走完阶段 2 再看 |
 | 浏览器打不开但 `curl 127.0.0.1` 正常 | 防火墙/安全组 | 回到 2.4,别忘了云厂商安全组 |
 | 页面能开但接口 502 | backend 没起来 | `logs backend` 看真实报错 |
 | Agent 一启动就报 LLM 认证失败 | Key 还是占位值 | 回到 3.2 |
