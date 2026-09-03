@@ -1,0 +1,453 @@
+/**
+ * 接口注释：
+ * 这份样式只服务于官网落地页（/landing、/terms、/privacy），由 landing 页面自己 import。
+ *
+ * 设计注释：
+ * 产品应用是硬编码深色主题（src/index.css 的 @theme inline 里 --color-background 是 hsl(0 0% 4%)，
+ * 并且 :root 上写死了 color-scheme: dark），而官网是浅色调。
+ * 这两套色彩不能共存在同一组 token 上，所以这里做了三件事来彻底隔离：
+ *   1. 官网自己的色值全部用 --lp-* 前缀，和产品的 --color-* 完全不撞名，Tailwind 的
+ *      主题 token 一个都不改动，60 多个 shadcn 组件的外观零风险。
+ *   2. body 的浅色底只在 <html data-lp-root> 下生效。这个属性由落地页挂载时加上、
+ *      卸载时移除，所以从官网跳回产品页时深色主题会自动还原。
+ *   3. 网格聚焦遮罩、噪点、光标缓动环、数据条栅格这几类效果 Tailwind 表达不了，
+ *      在这里用 .lp-* 前缀的普通类提供。
+ *
+ * ⚠️ 这个文件里绝对不能出现 @layer。
+ *
+ * 原因注释：
+ * CSS 的层叠层优先级，由每个层名"第一次被声明的位置"决定，而不是由规则的位置决定。
+ * 这份文件会被打包到 index.css 之前，所以一旦这里写了 @layer utilities { }，
+ * 就等于把 utilities 抢注成了第一层，也就是优先级最低的一层；
+ * Tailwind 随后声明 @layer theme, base, components, utilities 时位置已被占死，
+ * 最终层序会变成 utilities(最低) → components → theme → base(最高)。
+ * 于是 Tailwind Preflight（住在 base 层）反而压过了所有工具类，后果是：
+ *   *{margin:0;padding:0}   → 全站 px-* py-* mt-* gap-* mx-auto 全部失效
+ *   h1{font-size:inherit}   → 所有标题缩回正文字号
+ *   button{font:inherit}    → 按钮上的字号类失效
+ * 这个故障不只影响官网——production build 是单文件 CSS、层序全局共享，
+ * 产品应用的每个页面也会一起丢掉 padding 和 margin。而 dev 模式下 CSS
+ * 是分文件按需注入的，本地开发时看不出来，只在构建产物里发作。
+ *
+ * 所以这里所有规则都保持"无层"状态。无层 CSS 在层叠里的优先级高于任何 @layer，
+ * 这恰好也是这些定制类需要的位置：它们应当压过 Tailwind 工具类，而不是反过来。
+ */
+
+/* 教学注释：
+   字体族在这里声明一次，组件里统一用 class="lp-display" 引用，
+   避免每个组件各写一遍字体名导致后续换字体要改十几个文件。 */
+[data-lp-root] {
+  /* 色板取自参考稿 SYMPHONY，作为官网唯一色彩来源 */
+  --lp-bg: #f9f9f9;
+  --lp-surface: #ffffff;
+  --lp-ink: #1a1d23;
+  --lp-muted: #64748b;
+  --lp-border: #e5e7eb;
+  --lp-accent: #2d3642;
+
+  /* 首屏网格线专用色。
+     原因注释：这条线以前直接复用 --lp-border (#e5e7eb)，那是这层背景看不见的根因。
+     --lp-border 是给卡片边框调的——边框紧贴文字，和底色只差 5% 明度、
+     对比度约 1.19:1，若隐若现正是它该有的样子。
+     但首屏网格是一整片 1px 细线构成的肌理，在同样的对比度下直接低于感知阈值，
+     结果就是跟随光标的聚焦动效明明在跑，肉眼却发现不了。
+     两种用途对强度的要求相反，共用一个 token 就注定有一方是错的，所以拆开。
+
+     ⚠️ 改这个值不会影响全站卡片边框；反过来，想加深网格也不要去动 --lp-border，
+     那会让整站每一条分隔线一起变重。
+
+     取值过程：#e5e7eb（原先复用 --lp-border，太淡看不见）→ #ccd2da（偏深）
+     → #d6dae1。线宽同时从 1px 调到了 1.5px，两者是一起看的——
+     线变粗之后同样的颜色会显得更重，所以颜色要往回收一档。
+     以后再调，颜色和 --lp-grid-line 要放在一起判断，单看一个会调过头。 */
+  --lp-grid: #d6dae1;
+
+  /* 深色区块用的一组反相色。
+     设计注释：这里不复用参考稿 Sanctuary 的暖灰 #6B655B，因为它和 --lp-accent 的冷灰
+     放在一起会出现色温打架；统一压到与 --lp-ink 同一色系的深墨，整站色温才一致。 */
+  --lp-dark-bg: #16181d;
+  --lp-dark-surface: #1f232a;
+  --lp-dark-ink: #f4f5f7;
+  --lp-dark-muted: #9aa4b2;
+  --lp-dark-border: rgba(255, 255, 255, 0.12);
+
+  /* 状态色只用于真实语义（Agent 运行中 / 成功 / 失败），不作装饰色使用 */
+  --lp-live: #10b981;
+  --lp-warn: #f59e0b;
+  --lp-fail: #ef4444;
+
+  --lp-font-display: "Plus Jakarta Sans", "Inter", sans-serif;
+  --lp-font-body: "Inter", sans-serif;
+  --lp-font-mono: "JetBrains Mono", monospace;
+
+  /* 原因注释：导航滚动后要压一层半透明底色，否则正文会从导航文字底下穿过去。
+     这里不用 color-mix() 现算——Tailwind v4 的任意值语法里带逗号的函数解析不稳定，
+     写成固定 token 更可靠。数值就是 --lp-bg (#F9F9F9) 的 88% 不透明版本，
+     改主色时这两处要一起改。 */
+  --lp-bg-blur: rgba(249, 249, 249, 0.88);
+
+  /* 设计注释：这条缓动曲线是参考稿 Sanctuary 手感的真正来源，
+     比任何单个动效都重要，所以全站动画统一引用它，不允许各处自己写 ease。 */
+  --lp-ease: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* 原因注释：
+   产品应用在 body 上用 @apply bg-background 铺了近黑色底。官网是浅色，
+   如果只给最外层 div 设背景，橡皮筋滚动（overscroll）和 100vh 之外的区域仍会露出黑色。
+   所以这里直接接管 body，但严格限定在 data-lp-root 属性下，离开官网即失效。 */
+html[data-lp-root] {
+  color-scheme: light;
+  background-color: var(--lp-bg);
+}
+
+html[data-lp-root] body {
+  background-color: var(--lp-bg);
+  color: var(--lp-ink);
+  font-family: var(--lp-font-body);
+  overflow-x: hidden;
+}
+
+/* 教学注释：
+   产品端把滚动条改成了亮色细条（适配深色背景）。官网是浅底，
+   同一根滚动条会几乎看不见，所以这里按浅底重新给一次。 */
+html[data-lp-root] ::-webkit-scrollbar-thumb {
+  background-color: rgba(26, 29, 35, 0.2);
+}
+
+html[data-lp-root] ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(26, 29, 35, 0.35);
+}
+
+/* ============================================================
+   字体族工具类
+   ============================================================
+   原因注释：Tailwind 的 font-[...] 任意值在 v4 里需要 family-name: 类型提示
+   才能确定是字号还是字重还是字族，写错就静默失效（页面照样渲染，只是字体没换，
+   很难发现）。这里直接给两个工具类，组件里写 class="lp-display" 即可。 */
+.lp-display {
+  font-family: var(--lp-font-display);
+}
+
+/* 教学注释：tabular-nums 让数字等宽。参考稿 Sanctuary 用了这一条，
+   它的作用是在数字滚动或状态刷新时字符宽度不变——否则 "1" 比 "8" 窄，
+   计时器每跳一次整行文字都会轻微抖动。可观测性区块的耗时和 token 数必须用它。 */
+.lp-mono {
+  font-family: var(--lp-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   1px 网格：参考稿 SYMPHONY 的视觉灵魂
+   ============================================================
+   设计注释：整站的区块切分不靠阴影和圆角，而是靠 1px 细线，
+   这是瑞士编辑排版的手法。这里只提供线条本身，间距交给布局层。 */
+.lp-divide-x > * + * {
+  border-left: 1px solid var(--lp-border);
+}
+
+.lp-divide-x-dark > * + * {
+  border-left: 1px solid var(--lp-dark-border);
+}
+
+/* ============================================================
+   数据条网格（Hero 下方那排结构性事实）
+   ============================================================
+   原因注释：参考稿 SYMPHONY 的 ticker 是固定六列、每项一条 border-right，
+   单行布局下这样写没问题。但官网要在手机上折成两列、平板三列，
+   一旦换行，"每项都有左边框"就会在每一行的行首多出一条竖线，
+   看起来像渲染错误。用 Tailwind 的任意变体拼 nth-child 能做，
+   但三个断点叠起来会变成一长串顺序敏感的类名，改一次就容易破。
+   所以这块布局整体放在 CSS 里，一次写对：
+   每行第一格去掉左边框和左内边距，让文字与页面栅格左沿对齐。 */
+.lp-ticker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.lp-ticker > * {
+  border-top: 1px solid var(--lp-border);
+  border-left: 1px solid var(--lp-border);
+  padding: 2rem 1.5rem;
+}
+
+/* 第一行不画上边框——上方 Hero 自己有 border-bottom，两条会叠成 2px 粗线 */
+.lp-ticker > :nth-child(-n + 2) {
+  border-top: 0;
+}
+
+.lp-ticker > :nth-child(2n + 1) {
+  border-left: 0;
+  padding-left: 0;
+}
+
+/* 教学注释：下面每个断点都要把上一个断点的"行首"规则显式还原回来。
+   不能只靠 `.lp-ticker > *` 重新声明一遍——`:nth-child()` 的选择器权重
+   (0,2,0) 高于 `> *` 的 (0,1,0)，窄屏那条 2n+1 规则会一路生效到大屏，
+   导致第 3、5 格在六列布局下莫名少一条竖线。这类因为权重而不是因为
+   媒体查询顺序造成的失效，在浏览器里非常难定位，所以必须逐档写清。 */
+@media (min-width: 768px) {
+  .lp-ticker {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .lp-ticker > :nth-child(2n + 1),
+  .lp-ticker > :nth-child(3n + 1) {
+    border-top: 1px solid var(--lp-border);
+    border-left: 1px solid var(--lp-border);
+    padding-left: 1.5rem;
+  }
+
+  .lp-ticker > :nth-child(-n + 3) {
+    border-top: 0;
+  }
+
+  .lp-ticker > :nth-child(3n + 1) {
+    border-left: 0;
+    padding-left: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .lp-ticker {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .lp-ticker > *,
+  .lp-ticker > :nth-child(2n + 1),
+  .lp-ticker > :nth-child(3n + 1),
+  .lp-ticker > :nth-child(-n + 3) {
+    border-top: 0;
+    border-left: 1px solid var(--lp-border);
+    padding-left: 1.5rem;
+  }
+
+  .lp-ticker > :first-child {
+    border-left: 0;
+    padding-left: 0;
+  }
+}
+
+/* ============================================================
+   网格聚焦遮罩
+   ============================================================
+   设计注释：这是把参考稿 Sanctuary 的"光标聚焦"效果从照片移植到网格上的产物。
+   原稿是两层同一张照片（一层清晰、一层高斯模糊），用 radial-gradient 遮罩在
+   光标处开一个"清晰的洞"。官网没有全屏大图，硬搬无处落地，所以这里把遮罩的
+   作用对象换成 1px 网格线本身：网格默认几乎不可见，只在光标周围显影。
+
+   两个参考稿的 DNA 在这里真正融合，而且语义上贴合产品——
+   "系统在你注视之处显影"，对一个卖可观测性的平台是个合适的隐喻。
+
+   --lp-x / --lp-y 由 Hero 组件用 requestAnimationFrame 写入（带缓动追赶）。 */
+.lp-grid-field {
+  /* 线宽 1.5px。原本是 1px，加深颜色后仍不够明显，先试过 2px 偏重，收到 1.5px。
+     教学注释：这里的写法是 linear-gradient 从 0 到 --lp-grid-line 画实色、
+     之后转 transparent，配合 background-size 就形成了网格。
+     所以"线宽"由色标位置决定，不是 border-width——
+     两条 gradient 和 background-size 必须一起看，改一个不改另一个
+     会得到疏密不均的网格。抽成变量是为了两条 gradient 不会各写各的。
+
+     原因注释：1.5px 是小数，在 DPR 1 的屏幕上会抗锯齿成一条略柔的线，
+     在 DPR 2 的屏幕上正好是 3 个物理像素、边缘干净。
+     这里要的就是"比 1px 重、比 2px 轻"，那点柔化反而有利，所以不取整。 */
+  --lp-grid-line: 1.5px;
+  background-image:
+    linear-gradient(to right, var(--lp-grid) var(--lp-grid-line), transparent var(--lp-grid-line)),
+    linear-gradient(to bottom, var(--lp-grid) var(--lp-grid-line), transparent var(--lp-grid-line));
+  background-size: 72px 72px;
+  /* 原因注释：遮罩用 transparent → black 的方向，是让光标处不透明（网格显影）、
+     远处透明（网格隐去）。circle 380px 是试出来的手感值：再小会像手电筒太刻意，
+     再大则失去"聚焦"的意味。
+
+     圆心这一档取 1 而不是原来的 0.85：这一档决定的是整个效果最亮的那一点，
+     打折之后网格线的实际渲染色比 --lp-grid 还要淡，等于刚加深的颜色又被削掉一截。
+     衰减留给中段和边缘去做。 */
+  mask-image: radial-gradient(
+    circle 380px at var(--lp-x, 50%) var(--lp-y, 50%),
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 0.45) 45%,
+    transparent 100%
+  );
+  -webkit-mask-image: radial-gradient(
+    circle 380px at var(--lp-x, 50%) var(--lp-y, 50%),
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 0.45) 45%,
+    transparent 100%
+  );
+}
+
+/* 深色区块里同样铺一层网格，但不跟随光标，只做静态肌理 */
+.lp-grid-static-dark {
+  background-image:
+    linear-gradient(to right, var(--lp-dark-border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--lp-dark-border) 1px, transparent 1px);
+  background-size: 72px 72px;
+}
+
+/* ============================================================
+   噪点肌理
+   ============================================================
+   设计注释：参考稿 Sanctuary 用的是 opacity 0.08，那是在 #6B655B 暖灰深底上的取值。
+   官网主色是 #F9F9F9 近白底，同样的浓度会显脏、像 JPEG 压缩噪点，
+   所以这里压到 0.03 并且只在深色区块里使用。 */
+.lp-noise::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.03;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ============================================================
+   光标缓动环
+   ============================================================
+   设计注释：参考稿 Sanctuary 全局写了 cursor: none，然后用一个 4px 实心点 +
+   一个 32px 描边环来替代系统光标。那是全屏单页体验（body overflow: hidden）的做法。
+   官网是长滚动页面，有大量可读文案和链接，隐藏系统光标会导致：
+   选不了文字、看不到 I-beam、触摸设备完全失效、无障碍风险。
+   所以这里只保留描边环（滑动惯性的质感来源），系统光标照旧显示。 */
+.lp-cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(26, 29, 35, 0.28);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 9999;
+  transition:
+    width 0.25s var(--lp-ease),
+    height 0.25s var(--lp-ease),
+    border-color 0.25s var(--lp-ease),
+    opacity 0.3s var(--lp-ease);
+}
+
+/* 悬停在可点击元素上时环收紧，给出"可交互"的反馈 */
+.lp-cursor-ring[data-active="true"] {
+  width: 44px;
+  height: 44px;
+  border-color: rgba(26, 29, 35, 0.55);
+}
+
+/* ============================================================
+   Agent 状态环形进度
+   ============================================================
+   设计注释：参考稿 Sanctuary 的"长按 1.5s 进入"用了一个 scale(0) → scale(1) 的
+   圆形填充做进度表现。那种仪式感适合冥想类产品，但企业客户点 Log in 没有立刻进去
+   会以为按钮坏了，所以主 CTA 上绝对不用这个交互。
+
+   这里把那段动效移植到五 Agent 流水线的状态指示器上：环形填充表现"运行中"的进度。
+   动效因此从装饰变成了功能性的进度可视化——这是两份参考结合得最划算的一处。 */
+.lp-stage-ring {
+  position: relative;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  flex-shrink: 0;
+}
+
+.lp-stage-ring::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: 50%;
+  background: currentColor;
+  transform: scale(0);
+  transition: transform 1.4s var(--lp-ease);
+}
+
+/* 已完成的阶段：实心填满 */
+.lp-stage-ring[data-state="done"]::after {
+  transform: scale(1);
+}
+
+/* 运行中的阶段：填充到一半并持续呼吸，配合外扩的光环 */
+.lp-stage-ring[data-state="running"]::after {
+  transform: scale(0.55);
+  animation: lp-breathe 2s var(--lp-ease) infinite;
+}
+
+.lp-stage-ring[data-state="running"]::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  animation: lp-halo 2s var(--lp-ease) infinite;
+}
+
+/* ============================================================
+   状态脉冲点（沿用参考稿 SYMPHONY 的 pulse-dot）
+   ============================================================
+   教学注释：这个组件在参考稿里是纯装饰（"System Status: Harmonized"）。
+   官网只把它用在真实语义上——产品的运行时状态，不用来装点气氛。 */
+.lp-pulse::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  animation: lp-halo 2s var(--lp-ease) infinite;
+}
+
+@keyframes lp-halo {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+@keyframes lp-breathe {
+  0%,
+  100% {
+    transform: scale(0.5);
+  }
+  50% {
+    transform: scale(0.68);
+  }
+}
+
+/* ============================================================
+   无障碍兜底
+   ============================================================
+   原因注释：光标缓动环依赖鼠标，触摸设备上没有 hover 能力，
+   渲染出来会变成一个卡在角落不动的圆圈。这里直接隐藏。 */
+@media (hover: none) {
+  .lp-cursor-ring {
+    display: none;
+  }
+}
+
+/* 尊重系统的"减少动态效果"设置：关掉所有循环动画和聚焦遮罩的跟随 */
+@media (prefers-reduced-motion: reduce) {
+  .lp-cursor-ring {
+    display: none;
+  }
+
+  .lp-stage-ring::before,
+  .lp-stage-ring[data-state="running"]::after,
+  .lp-pulse::after {
+    animation: none;
+  }
+
+  /* 遮罩整个关掉，网格以静态肌理呈现。
+     原因注释：opacity 0.5 这个值是跟着 --lp-grid 走的——0.5 × #ccd2da 叠在 #f9f9f9 上
+     大致等于加深之前那条线的全强度。也就是说这里刻意保持了改色之前的观感：
+     用户既然要求"减少动态效果"，就不该顺手把静态背景也一起加重。
+     如果将来再调 --lp-grid，记得回来一起看这个值。 */
+  .lp-grid-field {
+    mask-image: none;
+    -webkit-mask-image: none;
+    opacity: 0.5;
+  }
+}
