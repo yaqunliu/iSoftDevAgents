@@ -1,0 +1,12 @@
+.env
+__pycache__/
+.DS_Store
+
+local/
+data/output/
+
+
+Architecture Agent/uv.lock
+
+Architecture Agent/arch_flow.html
+

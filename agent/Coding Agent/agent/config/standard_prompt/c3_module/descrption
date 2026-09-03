@@ -1,0 +1,443 @@
+# Task: Backend Interface & Method Derivation (Entity-Anchored, Domain-First, av-Governed)
+
+You are performing **Backend Interface & Method Derivation**
+with **Strict Domain-Driven, Entity-Anchored, and SRS-Evidenced Reasoning**.
+
+This task derives a COMPLETE, MINIMAL, and IMPLEMENTABLE set of backend methods.
+Every method MUST be executable against the approved domain data model.
+Isolated, abstract, or non-entity-backed methods are STRICTLY FORBIDDEN.
+
+---
+
+## 0. ABSOLUTE CONSTRAINTS (HIGHEST PRIORITY)
+
+- You MUST NOT invent new domain entities
+- You MUST NOT rename, split, or modify any entity or field from Data_Model.json
+- Every non-helper method MUST operate on at least one existing domain entity
+- Every method MUST be reachable from an entry module via a valid call chain
+- Methods MUST NOT exist purely as conceptual or "future" placeholders
+
+A method that cannot be grounded in:
+- Domain.md capability
+- Architectural_Views.md structure
+- AND Data_Model.json entities
+
+→ MUST NOT exist
+
+---
+
+## 1. PURPOSE
+
+Derive backend methods required to implement the system described by:
+
+- Domain.md (PRIMARY source of capability)
+- Architectural_Views.md (SOLE authority for exposure & structure)
+- SRS.md (functional requirements & I/O specification)
+- Approved Domain Data Model (Data_Model.json) (**ENTITY ANCHOR**)
+
+Methods include:
+- external_api       (externally exposed)
+- internal_function  (system / domain capability)
+- helper             (pure implementation support)
+
+---
+
+## 2. STRICT DERIVATION FLOW (NON-NEGOTIABLE)
+
+You MUST follow the phases in order.  
+Skipping or reordering phases is a modeling error.
+
+---
+
+### Phase 1 — Extract Declared Capabilities from Domain.md
+
+From Domain.md, extract ALL declared or clearly implied system capabilities.
+
+For each capability, identify:
+- Capability name
+- Responsible module
+- Responsible class / service
+- Intended business responsibility
+
+If a capability is NOT declared or implied in Domain.md,
+it MUST NOT be turned into a method.
+
+Additional Rule:
+- The "Responsible module" extracted for each capability MUST be chosen from Domain.md module names EXACTLY (no paraphrasing).
+
+---
+
+### Phase 2 — Decide Exposure via Architectural_Views.md
+
+Architectural_Views.md is the **SOLE authority** for exposure.
+
+For each capability-derived method:
+
+- If av explicitly shows it as REST / Webhook / Endpoint:
+  → `external_api`
+- Otherwise:
+  → `internal_function`
+
+SRS MUST NOT be used to upgrade a method to `external_api`.
+
+---
+
+## Additional Principle — External Event & Webhook Input Constraint
+
+For methods that handle external events (e.g. webhooks, callbacks, message queue deliveries):
+
+1. Input Shape Constraint
+   - The externally visible method input MUST generally consist of ONLY a single `payload` object representing the received external event body.
+   - Any other data (e.g. eventId, action, state, timestamps) MUST be parsed or derived from the payload and MUST NOT be declared as independent primary inputs.
+   - The payload MAY be decomposed internally via helper methods, but the external method signature MUST preserve the payload as the sole primary input.
+
+2. Entity Mapping Constraint
+   - The payload itself MUST have `entity_field = null`.
+   - Any value extracted from the payload that maps to a domain entity attribute MUST:
+     - Be explicitly listed as a derived input field if exposed internally, AND
+     - Have a corresponding `entity_field` mapping, AND
+     - Be justified by entity read/create/update operations.
+
+3. Exposure Semantics Constraint
+   - Webhook / external event handling methods exposed via HTTP MUST be classified as `external_api`.
+   - Such methods MUST use HTTP POST unless Architectural_Views.md explicitly specifies otherwise.
+
+4. Anti-Leakage Rule
+   - External event schemas MUST NOT leak into the domain model.
+   - No domain entity may mirror, embed, or persist raw external payload structures.
+   - Domain entities MUST only store normalized, explicitly mapped fields extracted from the payload.
+
+Violation of this principle invalidates the method.
+
+
+---
+
+
+### Phase 3 — Infer Required Parameters (CRITICAL REASONING STEP)
+
+For EACH method, you MUST infer the REQUIRED parameters needed to fully realize
+its described functionality.
+
+Reasoning rules:
+- Ask: "What data must this method read, write, validate, or return?"
+- Parameters MUST come from:
+  - Existing entity fields (preferred)
+  - SRS-defined inputs
+  - Explicit identifiers (e.g. eventId, ruleId)
+
+STRICT RULES:
+- Every inferred parameter MUST map to:
+  - an existing entity field, OR
+  - a required identifier linking to an entity
+- Parameters MUST NOT introduce new concepts
+- You MUST NOT output the reasoning, only the result
+
+If a method cannot be implemented using existing entity fields,
+the method is INVALID and MUST be removed.
+
+---
+
+### Phase 4 — Anchor Methods to Domain Entities (MANDATORY)
+
+For each method (except helper):
+
+**Step 4.1: Identify Entity Read Operations**
+
+Determine which entities the method READS from:
+- Check if method needs to:
+  - Load existing entity by ID
+  - Query entities by criteria
+  - Traverse relationships
+  - Validate entity state
+- Mark operation as `read`
+
+**Step 4.2: Identify Entity Write Operations**
+
+Determine which entities the method WRITES to:
+- **CRITICAL**: Check if ANY output field maps to an entity field
+- Check if method needs to:
+  - Create new entity instance
+  - Update existing entity fields
+  - Modify entity state/status
+  - Trigger entity lifecycle transition
+- Mark operation as:
+  - `create` (new entity instance)
+  - `update` (modify existing entity fields)
+  - `trigger` (state transition without field updates)
+
+**Step 4.3: Identify Entity Aggregation**
+
+Determine if method performs cross-entity computations:
+- Check if method:
+  - Computes statistics across multiple entity instances
+  - Groups/filters entities for reporting
+  - Generates derived metrics
+- Mark operation as `aggregate`
+
+**CRITICAL VALIDATION RULES:**
+
+1. **Output-to-Entity Mapping Rule:**
+   - For EVERY field in `output.fields`:
+     - If `entity_field` is NOT null
+     - The entity specified in `entity_field` MUST appear in `entity_operations`
+     - The operation MUST include `create` or `update`
+   - Example:
+```json
+     "output": {
+       "fields": {
+         "state": {
+           "type": "enum",
+           "entity_field": "ReviewEvent.state"  // ← This means ReviewEvent MUST be in entity_operations with update/create
+         }
+       }
+     }
+     "entity_operations": [
+       {
+         "entity": "ReviewEvent",
+         "operation": "update"  // ← MANDATORY
+       }
+     ]
+```
+
+2. **Input-to-Entity Mapping Rule:**
+   - For EVERY field in `input.fields`:
+     - If `entity_field` is NOT null
+     - The entity MUST appear in `entity_operations` with at least `read`
+   - Exception: identifier fields (like `event_id`) used for lookup do not require separate read operation if the entity is already in operations
+
+3. **Entity Operation Completeness:**
+   - Methods without entity operations are INVALID (except helper)
+   - Entity names and field names MUST EXACTLY match Data_Model.json
+   - Methods MUST NOT bypass entities via anonymous data structures
+   - Every entity listed in `entity_operations` MUST be justified by either:
+     - Input field with matching entity_field, OR
+     - Output field with matching entity_field, OR
+     - Explicit read/aggregate operation documented in Domain.md or av
+
+4. **Operation Type Selection:**
+   - Use `create` when method instantiates a new entity
+   - Use `update` when method modifies existing entity fields
+   - Use `read` when method only retrieves entity data
+   - Use `aggregate` when method computes across multiple entities
+   - Use `trigger` when method changes state without data modification
+   - Multiple operations on same entity are allowed (e.g., read + update)
+
+---
+
+### Phase 5 — Add Helper Methods (Implementation-Only)
+
+Helper methods may be added ONLY IF they are required to support
+existing external_api or internal_function methods.
+
+Helper method rules:
+- MUST belong to a concrete class shown in av
+- MUST NOT operate on domain entities
+- MUST NOT declare entity_operations
+- MUST NOT introduce business semantics
+
+Examples:
+- parse payload
+- verify signature
+- format response
+- aggregate in-memory results
+
+---
+
+### Phase 6 — Method Description (MANDATORY, SRS-ALIGNED, ENGINEERING-GRADE)
+
+Each method MUST include a `description` field.
+
+**Description Derivation Process:**
+
+1. **Primary Source - SRS Functional Requirements:**
+   - Search SRS.md for the functional requirement corresponding to this method
+   - Look for:
+     - Explicit feature descriptions matching the method's purpose
+     - User stories or use cases that this method fulfills
+     - Functional requirement IDs (e.g., FR-001, UC-003)
+   - If found, the description MUST:
+     - Paraphrase the SRS requirement in implementation-oriented language
+     - Reference the functional requirement ID if available
+     - Maintain consistency with SRS terminology
+
+2. **Secondary Source - Domain.md + av:**
+   - If SRS does not explicitly describe this method:
+     - Use Domain.md capability description as the primary basis
+     - Augment with av architectural context
+   - Focus on HOW the method fulfills its role in the system
+
+3. **Description Structure (2-3 sentences):**
+   - Sentence 1: What the method does (concrete function)
+   - Sentence 2: Which functional requirement or system capability it fulfills (with SRS reference if available)
+   - Sentence 3 (optional): How it participates in the processing chain or interacts with entities
+
+**Requirements:**
+- Description MUST be implementation-oriented, not conceptual
+- If SRS explicitly describes the functionality, prioritize SRS wording over Domain.md
+- Include SRS requirement ID when traceable (e.g., "Implements FR-007: Automated MR Commenting")
+- Describe entity operations when significant (e.g., "Creates Report entity with analysis results")
+- Avoid vague terms like "handles", "manages", "processes" without specifics
+
+**Examples:**
+
+❌ BAD (vague, no SRS reference):
+```
+"Handles webhook events from external sources."
+```
+
+✅ GOOD (SRS-aligned, specific):
+```
+"Receives and validates GitLab merge request webhook events (SRS 4.1.1). Creates a ReviewEvent entity with parsed source code and metadata. Triggers the code analysis pipeline for the new event."
+```
+
+❌ BAD (ignores SRS, purely technical):
+```
+"Updates the state field of an entity in the database."
+```
+
+✅ GOOD (SRS-aligned, functional):
+```
+"Transitions a ReviewEvent to a new lifecycle state based on analysis completion (SRS 4.2.3). Updates the ReviewEvent.state field and records the transition timestamp for audit purposes."
+```
+
+---
+
+### Phase 7 — Module & Class Ownership Validation
+
+Each method MUST belong to:
+- EXACTLY ONE module (from av)
+- EXACTLY ONE class/service (from av or Domain.md)
+
+Cross-module or ambiguous ownership is FORBIDDEN.
+
+---
+
+### Phase 8 — HTTP Semantics Validation (external_api ONLY)
+
+For `external_api` methods:
+
+- POST   → create / trigger / generate
+- PATCH  → state transitions ONLY if SRS-defined
+- PUT    → full replacement ONLY if explicitly stated
+- GET    → read / view
+- DELETE → ONLY if explicitly allowed
+
+internal_function and helper:
+- http.verb = null
+- http.route = null
+
+---
+
+### Phase 9 — Input / Output Field Validation
+
+For each input/output field:
+
+- `type` MUST be a business-level type
+- `entity_field` MUST be specified if it maps to an entity attribute
+  (e.g. ReviewEvent.eventId)
+- Fields without entity origin MUST set entity_field = null
+
+**CRITICAL CROSS-VALIDATION:**
+- Every `output.fields` entry with non-null `entity_field` MUST have corresponding entity in `entity_operations` with `create` or `update`
+- Every `input.fields` entry with non-null `entity_field` MUST have corresponding entity in `entity_operations` with at least `read`
+
+STRICTLY FORBIDDEN:
+- UI-derived fields
+- Convenience fields
+- Fields not traceable to entities or SRS
+
+---
+
+## 3. METHOD TYPES (EXACTLY ONE)
+
+- external_api
+- internal_function
+- helper
+
+---
+
+## 4. OUTPUT FORMAT (STRICT)
+
+Return ONLY a single JSON object.  
+No explanations. No comments. No extra keys.
+
+### Method Structure
+
+You MUST output the full backend module structure in this exact shape:
+```json
+{
+    "modules": {
+      "<ModuleName>": {
+        "description": "<module description from av or Domain.md>",
+        "entities": ["<EntityName>", "..."],
+        "methods": {
+          "<MethodKey>": {
+            "method_name": "<PascalCaseAction>",
+            "module": "<ModuleName>",
+            "class": "<ClassOrServiceName>",
+            "description": "<2–3 sentence SRS-aligned engineering description, include SRS reference if traceable>",
+            "type": "external_api | internal_function | helper",
+            "http": {
+              "verb": "GET | POST | PUT | PATCH | DELETE | null",
+              "route": "/<module>/<resource> | null"
+            },
+            "input": {
+              "fields": {
+                "<fieldName>": {
+                  "type": "<business type>",
+                  "entity_field": "Entity.field | null",
+                  "required": true | false
+                }
+              }
+            },
+            "output": {
+              "fields": {
+                "<fieldName>": {
+                  "type": "<business type>",
+                  "entity_field": "Entity.field | null"
+                }
+              }
+            },
+            "entity_operations": [
+              {
+                "entity": "<EntityName>",
+                "operation": "create | update | read | aggregate | trigger"
+              }
+            ]
+          }
+        }
+      }
+    }
+}
+```
+
+STRICT RULES FOR THIS OUTPUT:
+- "<ModuleName>" keys MUST be EXACT module names from av/Domain.md
+- "methods" MUST be an object/map, NOT a list
+- "<MethodKey>" MUST be unique within the module, recommended as the same as method_name
+- `entity_operations` MUST be consistent with all input/output `entity_field` mappings
+
+---
+
+## 5. FINAL VALIDATION CHECKLIST
+
+Before outputting, verify EVERY method satisfies:
+
+- [ ] Description references SRS when applicable
+- [ ] Every output field with `entity_field` has matching entity in `entity_operations` with create/update
+- [ ] Every input field with `entity_field` has matching entity in `entity_operations` with at least read
+- [ ] Every entity in `entity_operations` is justified by input/output fields or documented capability
+- [ ] Entity names exactly match Data_Model.json
+- [ ] Field names exactly match Data_Model.json
+- [ ] No orphaned entity operations (operations without corresponding I/O)
+- [ ] No orphaned I/O fields (entity_field mappings without corresponding operations)
+
+---
+
+## 6. INPUT
+
+Domain.md: {{domain}}  
+Architectural_Views.md: {{av}}  
+{{add}}  
+SRS.md: {{srs}}
+Data_Model.json: {{data_model}}  

@@ -1,0 +1,126 @@
+You are performing Step-5: “Code-Level API Selection”.
+
+============================================================
+PURPOSE
+============================================================
+For every refined step (from Step-4), evaluate which API is the best
+implementation choice at code-level.
+
+You MUST:
+  - Generate EXACTLY 4 API candidates (or closest possible).
+  - Score each API using strict 0/1 rule-based evaluation.
+  - Respect project constraints, environment constraints, and module consistency.
+  - Produce machine-verifiable JSON only.
+
+This is a general API selection engine and MUST NOT assume any
+specific programming language or framework unless provided explicitly
+in the memory block.
+
+============================================================
+INPUTS
+============================================================
+module_description: "{{module_description}}"
+method_list: "{{method_list}}"
+step_list: "{{step_list}}"
+existing_dependencies: "{{dependencies}}"
+module_used_packages: "{{module_packages}}"
+
+technology_memory: |
+  {{memory_block}}      # ← For Flask, Python, Java, Node, etc.
+
+environment:
+  runtime_language: "{{language}}"
+  runtime_version: "{{runtime_version}}"
+  framework: "{{framework}}"
+  framework_version: "{{framework_version}}"
+
+============================================================
+CANDIDATE RULES
+============================================================
+candidate_requirement:
+  count: 4
+  rule: >
+    Generate 4 realistic API options based on the described step behavior.
+    If fewer than 4 exist, choose nearest alternatives from:
+      - Standard library
+      - Framework ecosystem
+      - Lightweight utilities already used in the project
+
+Rules:
+  - APIs MUST be real, documented, verifiable.
+  - APIs MUST NOT be invented.
+  - Prefer APIs consistent with module_used_packages and dependencies.
+  - Prefer APIs consistent with technology_memory.
+
+============================================================
+CHECKLIST DEFINITIONS
+============================================================
+functional:
+  - F1_function_semantic_match
+  - F2_input_output_contract_match
+
+environment:
+  - C1_runtime_compatibility       # Python/Node/Java… based on memory
+  - C2_framework_compatibility     # Flask/Django/Spring… based on memory
+  - C3_concurrency_safety
+  - C4_license_compliance
+
+dependency:
+  - D1_exists_in_dependency_list
+  - D2_version_compatible
+  - D3_no_heavy_new_dependency
+  - D4_tech_stack_consistency
+
+module_consistency:
+  - M1_same_library_within_module
+  - M2_api_family_consistent
+  - M3_output_reusable_for_next_step
+
+contract_fitness:
+  - K1_structured_error_support
+  - K2_timeout_retry_support
+  - K3_idempotency
+  - K4_strong_typing_support
+
+stability:
+  - S1_recent_maintenance
+  - S2_no_critical_issues
+  - S3_good_documentation
+
+============================================================
+SELECTION RULES
+============================================================
+must_pass:
+  - F1_function_semantic_match
+  - C1_runtime_compatibility
+  - C2_framework_compatibility
+  - M1_same_library_within_module
+
+thresholds:
+  dependency_threshold: 3
+  contract_threshold: 2
+  stability_threshold: 1
+
+============================================================
+OUTPUT FORMAT (STRICT JSON)
+============================================================
+[
+  {
+    "step": "<step_description>",
+    "candidate_api_list": [
+      {
+        "api_name": "module.function",
+        "package": "pkg",
+        "description": "short description",
+        "scores": {
+          "functional": {...},
+          "environment": {...},
+          "dependency": {...},
+          "module_consistency": {...},
+          "contract_fitness": {...},
+          "stability": {...}
+        }
+      }
+    ]
+  }
+]

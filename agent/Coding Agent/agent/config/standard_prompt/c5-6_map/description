@@ -1,0 +1,286 @@
+You are performing PHYSICAL PROJECT SKELETON MAPPING for a Flask-based backend system.
+
+Your task is to map a PRE-EXTRACTED and VALIDATED semantic model into a COMPLETE, DETERMINISTIC PHYSICAL FILE/FOLDER SKELETON.
+
+This task:
+- DOES NOT generate implementation code
+- DOES NOT modify semantics
+- Produces a PHYSICAL PROJECT STRUCTURE SPEC
+  that will be consumed by downstream code generators
+
+---
+
+## 1. SCOPE & RESPONSIBILITY
+
+You are responsible ONLY for:
+
+- Physical file and folder placement
+- File naming normalization
+- Backend layer separation
+- Dependency wiring between backend layers
+- Dependency-aware priority assignment
+- Metadata annotation per file
+- Mapping semantic backend modules and entities
+  to a concrete Flask backend project structure
+
+You MUST NOT:
+
+- Reinterpret business semantics
+- Modify backend methods or workflows
+- Invent or omit modules or entities
+- Generate implementation code
+- Introduce frontend concerns of any kind
+- Introduce persistence or database assumptions
+
+---
+
+## 2. AUTHORITATIVE INPUTS (STRICT)
+
+You MUST use ONLY the provided semantic_model.
+
+semantic_model includes:
+- backend.modules.<ModuleName>.methods.<MethodName>
+- data_model.entities.<EntityName>
+
+The semantic_model is AUTHORITATIVE.
+
+If something does NOT exist in semantic_model:
+→ YOU MUST NOT CREATE IT.
+
+---
+
+## 3. FINAL OUTPUT FORMAT (STRICT)
+
+Output ONE VALID JSON object ONLY.
+
+- No prose
+- No explanations
+- No comments
+- No markdown
+
+The output MUST strictly follow this structure:
+
+{
+  "backend": {
+    "run.py": {},
+    "app": {
+      "__init__.py": {},
+      "config.py": {},
+      "extensions.py": {},
+      "api": {
+        "__init__.py": {},
+        "<module>_api.py": {}
+      },
+      "models": {
+        "__init__.py": {},
+        "<entity>.py": {}
+      },
+      "repositories": {
+        "<entity>_repository.py": {}
+      },
+      "services": {
+        "<module>_service.py": {}
+      },
+      "utils": {
+        "<util>.py": {}
+      },
+      "tasks": {
+        "<task>.py": {}
+      }
+    }
+  }
+}
+
+---
+
+## 4. BACKEND NAMING NORMALIZATION RULES (MANDATORY)
+
+All backend filenames MUST:
+
+- be lowercase
+- use snake_case
+- be deterministic
+
+Transformations:
+- ModuleName → module_name
+- EntityName → entity_name
+
+---
+
+## 5. MODULES → API + SERVICE (MANDATORY)
+
+For EACH backend module in semantic_model.backend.modules:
+
+Create EXACTLY:
+
+- app/api/<module>_api.py
+- app/services/<module>_service.py
+
+### File Metadata Rules (CRITICAL)
+
+Each generated file MUST contain metadata fields:
+- priority
+- description
+- source_ref
+- depends_on
+
+#### description (MANDATORY, STRICT)
+
+The `description` field MUST:
+
+- Be a **3–5 sentence synthesized summary**
+- Be derived by **aggregating ALL method descriptions**
+  defined within the module
+- Describe:
+  - The overall responsibility of the module
+  - The types of operations it performs
+  - How it participates in backend workflows
+
+The description MUST NOT:
+- Copy any single method description verbatim
+- Introduce new behavior
+- Mention frameworks (Flask, ORM, HTTP, etc.)
+
+#### source_ref
+
+For module files:
+- source_ref MUST include:
+  ["backend.modules.<ModuleName>"]
+
+---
+
+## 6. ENTITIES → MODELS + REPOSITORIES (MANDATORY)
+
+For EACH entity in data_model.entities:
+
+Create EXACTLY:
+
+- app/models/<entity>.py
+- app/repositories/<entity>_repository.py
+
+### app/models/<entity>.py
+
+Metadata rules:
+- source_ref MUST include:
+  ["data_model.entities.<EntityName>"]
+
+If the entity has relationships:
+- MUST also include related entities:
+  ["data_model.entities.<OtherEntityName>"]
+
+### app/repositories/<entity>_repository.py
+
+Metadata rules:
+- source_ref MUST include:
+  ["data_model.entities.<EntityName>.repository"]
+
+---
+
+## 7. FILE METADATA FORMAT (MANDATORY)
+
+Each file MUST be represented as:
+
+"<filename>": {
+  "priority": <int>,
+  "description": "<3–5 sentence summary>",
+  "source_ref": ["<semantic path>"] | null,
+  "depends_on": ["<file path>", ...]
+}
+
+All fields are REQUIRED.
+If no dependencies exist, use an empty array.
+
+---
+
+## 8. DEPENDENCY RULES (STRICT, DIRECTIONAL)
+
+### MODELS
+- MUST NOT depend_on any file
+
+### REPOSITORIES
+- MUST depend_on the corresponding model file
+
+### SERVICES
+- MUST depend_on ALL repositories they use
+- MUST depend_on ALL model files they read or modify
+- MAY depend_on other service files
+- MUST NOT depend_on API files
+
+### API
+- MUST depend_on service files ONLY
+
+### app/models/__init__.py
+- MUST depend_on ALL model files
+
+### app/api/__init__.py
+- MUST depend_on ALL API files
+
+### app/__init__.py
+- MUST depend_on app/api/__init__.py
+- MUST depend_on app/config.py
+
+### run.py
+- MUST depend_on app/__init__.py
+
+---
+
+## 9. PRIORITY ASSIGNMENT RULES (DEPENDENCY-DRIVEN, STRICT)
+
+priority defines REQUIRED initialization / generation order.
+
+Lower number = earlier.
+
+### Core Rules
+
+1. priority MUST be derived from dependency relationships
+2. For any file A and file B:
+   - If A depends_on B
+     → priority(A) MUST be strictly greater than priority(B)
+3. Files without dependency relationships MAY share the same priority
+4. priority values MUST form a valid acyclic topological ordering
+5. priority assignment MUST be deterministic
+
+### Layer-Based Baseline (SOFT GUIDELINE)
+
+Unless overridden by explicit dependencies:
+
+- models
+- repositories
+- services
+- api
+- config / extensions
+- __init__.py / run.py
+
+IMPORTANT:
+- Dependency correctness ALWAYS overrides layer ordering
+- Service-to-service dependencies MUST be reflected in priority
+
+### Cycles
+
+- Cyclic dependencies are STRICTLY FORBIDDEN
+- If a cycle is implied, YOU MUST NOT resolve it by inventing files
+
+---
+
+## 10. FORBIDDEN ACTIONS (ABSOLUTE)
+
+You MUST NOT:
+
+- Invent files or folders
+- Skip required files
+- Merge architectural layers
+- Break dependency direction
+- Output implementation code
+- Output prose or markdown in final answer
+
+---
+
+## 11. INPUT
+
+Using ONLY the provided semantic_model:
+
+data_model: {{data_model}}
+backend: {{backend}}
+
+Generate the COMPLETE Flask backend project skeleton JSON
+that strictly conforms to ALL rules above.

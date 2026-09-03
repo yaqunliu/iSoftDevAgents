@@ -1,0 +1,109 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: isoftdev
+      POSTGRES_USER: isoftdev
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-isoftdev}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "${ISOFTDEVAGENTS_PG_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U isoftdev"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    build:
+      context: .
+      dockerfile: deploy/docker/backend.Dockerfile
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}
+        UV_DEFAULT_INDEX: ${UV_DEFAULT_INDEX:-https://pypi.tuna.tsinghua.edu.cn/simple}
+        UV_HTTP_TIMEOUT: ${UV_HTTP_TIMEOUT:-600}
+    restart: unless-stopped
+    ports:
+      - "${ISOFTDEVAGENTS_BACKEND_PORT:-9010}:9010"
+    environment:
+      # 接口注释：
+      # 这里统一从宿主机环境读取值；本地可以走 deploy/docker/run-local.sh，
+      # 线上可以在 systemd / CI / 面板里注入同名环境变量。
+      ISOFTDEVAGENTS_LLM_BASE_URL: ${ISOFTDEVAGENTS_LLM_BASE_URL:-}
+      ISOFTDEVAGENTS_LLM_MODEL: ${ISOFTDEVAGENTS_LLM_MODEL:-gpt-5.4}
+      ISOFTDEVAGENTS_LLM_API_KEY: ${ISOFTDEVAGENTS_LLM_API_KEY:-}
+      ISOFTDEVAGENTS_ENABLE_REAGENT: ${ISOFTDEVAGENTS_ENABLE_REAGENT:-1}
+      ISOFTDEVAGENTS_ENABLE_ARCH_AGENT: ${ISOFTDEVAGENTS_ENABLE_ARCH_AGENT:-1}
+      ISOFTDEVAGENTS_ENABLE_UI_AGENT: ${ISOFTDEVAGENTS_ENABLE_UI_AGENT:-1}
+      ISOFTDEVAGENTS_ENABLE_CODING_AGENT: ${ISOFTDEVAGENTS_ENABLE_CODING_AGENT:-1}
+      ISOFTDEVAGENTS_ENABLE_TEST_AGENT: ${ISOFTDEVAGENTS_ENABLE_TEST_AGENT:-1}
+      # 设计注释：
+      # Docker 容器内不要继承宿主机 `.env` 里的绝对 Python 路径。
+      # 这里显式置空，表示容器内一律走镜像自己的 Python / 自动探测结果。
+      ISOFTDEVAGENTS_REAGENT_PYTHON_BIN: ""
+      ISOFTDEVAGENTS_REAGENT_SITE_PACKAGES: ""
+      ISOFTDEVAGENTS_ARCH_AGENT_PYTHON_BIN: ""
+      ISOFTDEVAGENTS_CODING_AGENT_PYTHON_BIN: ""
+      ISOFTDEVAGENTS_CODING_AGENT_SITE_PACKAGES: ""
+      ISOFTDEVAGENTS_TEST_AGENT_SITE_PACKAGES: ""
+      ISOFTDEVAGENTS_AGENT_TIMEOUT: ${ISOFTDEVAGENTS_AGENT_TIMEOUT:-3600}
+      ISOFTDEVAGENTS_ANALYSIS_AGENT_TIMEOUT: ${ISOFTDEVAGENTS_ANALYSIS_AGENT_TIMEOUT:-3600}
+      ISOFTDEVAGENTS_GENERATION_AGENT_TIMEOUT: ${ISOFTDEVAGENTS_GENERATION_AGENT_TIMEOUT:-3600}
+      ISOFTDEVAGENTS_ARCHITECTURE_AGENT_TIMEOUT: ${ISOFTDEVAGENTS_ARCHITECTURE_AGENT_TIMEOUT:-3600}
+      ISOFTDEVAGENTS_UI_AGENT_TIMEOUT: ${ISOFTDEVAGENTS_UI_AGENT_TIMEOUT:-3600}
+      ISOFTDEVAGENTS_CODING_AGENT_TIMEOUT: ${ISOFTDEVAGENTS_CODING_AGENT_TIMEOUT:-3600}
+      ISOFTDEVAGENTS_TEST_AGENT_TIMEOUT: ${ISOFTDEVAGENTS_TEST_AGENT_TIMEOUT:-3600}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://isoftdev:isoftdev@postgres:5432/isoftdev}
+      ISOFTDEVAGENTS_DELETE_LOCAL_FILES_AFTER_PERSIST: ${ISOFTDEVAGENTS_DELETE_LOCAL_FILES_AFTER_PERSIST:-0}
+      ISOFTDEVAGENTS_AGENT_DEBUG_STDIO: ${ISOFTDEVAGENTS_AGENT_DEBUG_STDIO:-1}
+      ISOFTDEVAGENTS_AGENT_DEBUG_LLM_IO: ${ISOFTDEVAGENTS_AGENT_DEBUG_LLM_IO:-1}
+      ISOFTDEVAGENTS_AGENT_DEBUG_LLM_LOG_TO_FILE: ${ISOFTDEVAGENTS_AGENT_DEBUG_LLM_LOG_TO_FILE:-1}
+      ISOFTDEVAGENTS_AGENT_DEBUG_LLM_LOG_TO_CONSOLE: ${ISOFTDEVAGENTS_AGENT_DEBUG_LLM_LOG_TO_CONSOLE:-0}
+      ISOFTDEVAGENTS_AGENT_DEBUG_LLM_LOG_FILE: /app/agent/platform/log/llm-debug.log
+      ISOFTDEVAGENTS_AGENT_DEBUG_LLM_INPUT_LIMIT: ${ISOFTDEVAGENTS_AGENT_DEBUG_LLM_INPUT_LIMIT:-12000}
+      ISOFTDEVAGENTS_AGENT_DEBUG_LLM_OUTPUT_LIMIT: ${ISOFTDEVAGENTS_AGENT_DEBUG_LLM_OUTPUT_LIMIT:-12000}
+      ISOFTDEVAGENTS_AGENT_SHUTDOWN_WAIT_SECONDS: ${ISOFTDEVAGENTS_AGENT_SHUTDOWN_WAIT_SECONDS:-30}
+      CREWAI_TRACING_ENABLED: ${CREWAI_TRACING_ENABLED:-false}
+      VISION_AGENT_API_KEY: ${VISION_AGENT_API_KEY:-}
+      SERPER_API_KEY: ${SERPER_API_KEY:-}
+      ISOFTDEVAGENTS_IMAGE_LLM_API_KEY: ${ISOFTDEVAGENTS_IMAGE_LLM_API_KEY:-}
+      ISOFTDEVAGENTS_IMAGE_LLM_BASE_URL: ${ISOFTDEVAGENTS_IMAGE_LLM_BASE_URL:-}
+      ISOFTDEVAGENTS_IMAGE_LLM_MODEL: ${ISOFTDEVAGENTS_IMAGE_LLM_MODEL:-moonshot/kimi-k2.5}
+    volumes:
+      - ./agent/platform/data:/app/agent/platform/data
+      - ./agent/platform/log:/app/agent/platform/log
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:9010/api/healthz', timeout=5).read()
+      interval: 20s
+      timeout: 10s
+      retries: 6
+      start_period: 30s
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/docker/web.Dockerfile
+      args:
+        VITE_API_BASE_URL: ""
+        BASE_PATH: /
+        NPM_CONFIG_REGISTRY: ${NPM_CONFIG_REGISTRY:-https://registry.npmmirror.com}
+        PNPM_FETCH_TIMEOUT: ${PNPM_FETCH_TIMEOUT:-600000}
+        PNPM_FETCH_RETRIES: ${PNPM_FETCH_RETRIES:-5}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${ISOFTDEVAGENTS_WEB_PORT:-9080}:80"
+
+volumes:
+  pgdata:

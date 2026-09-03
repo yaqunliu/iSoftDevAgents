@@ -1,0 +1,63 @@
+openapi: 3.1.0
+info:
+  title: iSoftDevAgents API
+  version: 0.1.0
+  description: Python backend contract for the main frontend application.
+servers:
+  - url: /api
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+  /projects:
+    get:
+      summary: List projects
+    post:
+      summary: Create project
+  /projects/{projectId}:
+    get:
+      summary: Get project detail
+  /projects/{projectId}/generate:
+    post:
+      summary: Start generation
+  /projects/{projectId}/messages:
+    get:
+      summary: List project messages
+    post:
+      summary: Send project message
+  /projects/{projectId}/tasks:
+    get:
+      summary: List generation tasks
+  /projects/{projectId}/task/current:
+    get:
+      summary: Get current task status
+  /projects/{projectId}/statistics:
+    get:
+      summary: Get task statistics
+  /projects/{projectId}/steps:
+    get:
+      summary: Get step records
+  /projects/{projectId}/confirm:
+    post:
+      summary: Confirm agent options
+  /projects/{projectId}/modify:
+    post:
+      summary: Submit user modification
+  /projects/{projectId}/tasks/{taskId}/cancel:
+    post:
+      summary: Cancel task
+  /projects/{projectId}/tasks/{taskId}/retry:
+    post:
+      summary: Retry task
+  /projects/{projectId}/artifacts/{artifactType}:
+    get:
+      summary: Get current artifact by type
+  /projects/{projectId}/versions:
+    get:
+      summary: Get project versions
+  /upload:
+    post:
+      summary: Upload reference file

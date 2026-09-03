@@ -1,0 +1,170 @@
+## ROLE
+You are performing **Architecture-Faithful System Module Extraction** with strict, evidence-based, engineering-grade reasoning.
+
+---
+
+## PURPOSE
+From the provided system documentation, **extract the system’s existing BUSINESS / LOGICAL modules exactly as defined in the architecture**, and construct the **system-level dependency DAG**.
+
+This task is **not design, optimization, or refactoring**.
+It is a **faithful extraction and structuring of an already-defined architecture**.
+
+---
+
+## SCOPE & NON-GOALS (IMPORTANT)
+This task explicitly does **NOT**:
+- redesign the system
+- optimize module boundaries
+- merge, split, add, or remove modules
+- judge architectural quality
+
+The goal is **accurate structural extraction**, not improvement.
+
+---
+
+## SOURCE OF TRUTH (STRICT)
+
+Use **ONLY** the following documents:
+
+- **Architectural_Views.md (AV)**  
+  - `components`  
+  - `component_diagram`  
+  → **SOLE authority for module existence and structure**
+
+- **SRS.md**  
+  → **Supplementary source for business meaning only**
+
+---
+
+## MODULE IDENTIFICATION PRINCIPLES (NON-NEGOTIABLE)
+
+### 1. AV-ONLY MODULE DEFINITION
+- **Each module MUST correspond 1:1 to a component defined in AV**
+- The full module set is determined entirely by AV
+- **Do NOT add, remove, merge, or split modules**
+- If a component exists in AV, it MUST appear as a module
+
+> Modules are treated as **architectural facts**, not analytical conclusions.
+
+---
+
+### 2. NO MODULE CREATION FROM SRS
+- SRS MUST NOT be used to create modules
+- SRS MUST NOT be used to modify module boundaries
+- SRS is used only to:
+  - understand business responsibility
+  - enrich module descriptions
+
+---
+
+## INTERFACES (REQUIRED, NOT FORBIDDEN)
+
+### interfaces
+Each module MAY expose one or more **interfaces**.
+
+Interfaces represent:
+- APIs
+- service methods
+- commands
+- externally visible interaction points
+
+Rules:
+- Interfaces MUST be extracted from AV descriptions or interactions
+- Interfaces MAY be technical (e.g. API, service call)
+- Interfaces MUST NOT be invented
+- If no interfaces are explicitly described for a module, output an empty set `{}`
+
+> Interfaces are **intentional outputs** of this task.
+
+---
+
+## SYSTEM DAG (MANDATORY)
+
+### DAG Definition
+Construct a **Directed Acyclic Graph (DAG)** that represents the system’s structure.
+
+- Nodes = modules (from AV)
+- Edges = dependencies or interactions defined in AV `component_diagram`
+- DAG reflects **structural dependency and execution flow**, not optimization intent
+
+---
+
+### Entry Module Identification
+A module is an **entry module** if, according to AV:
+- it receives input from outside the system boundary, OR
+- it appears as a starting node in the component diagram
+
+Do NOT infer entry modules from interface count or naming.
+
+---
+
+## NAMING RULES (STRICT)
+
+### Module Naming
+Module names MUST:
+1. Be **derived directly from AV terminology**
+2. Be **concise and meaningful**
+3. Represent a single clear responsibility
+4. Use **PascalCase**
+5. Be valid **Python string identifiers** (letters and numbers only)
+
+Examples:
+- `ReviewEventTracking`
+- `RuleManagement`
+- `CodeAnalysisEngine`
+- `ReportingFeedback`
+- `AnalyticsStatistics`
+
+Avoid:
+- unnecessary suffixes (`System`, `Manager`) unless present in AV
+- compound names mixing responsibilities
+- invented vocabulary
+
+---
+
+## PROCESS
+1. Parse AV `components` to determine the complete module set  
+2. Parse AV `component_diagram` to determine structural relationships  
+3. Create one module per AV component (no modification)  
+4. Use SRS only to enrich business descriptions  
+5. Extract interfaces explicitly described for each module  
+6. Build the system DAG strictly from AV interactions  
+7. Identify entry modules based on AV structure  
+8. Output the result using the defined JSON format  
+
+---
+
+## OUTPUT FORMAT (STRICT)
+Output a **single valid JSON object**.
+No explanations. No commentary. No extra text.
+
+{
+  "domains": {
+    "<ModuleName>": {
+      "description": "<3–5 sentences describing business responsibility, based on AV + SRS>",
+      "interfaces": {
+        "<InterfaceName>",
+      }
+    }
+  },
+  "system_dag": {
+    "entry_modules": ["<ModuleName>"],
+    "edges": [
+      {
+        "from": "<ModuleName>",
+        "to": "<ModuleName>",
+        "evidence": "<Exact AV sentence describing this relationship>"
+      }
+    ]
+  }
+}
+
+
+
+
+---
+## Inputs:
+    Architectural_Views.md: {{av}} 
+        {{add}}
+    SRS.md: {{srs}}
+  

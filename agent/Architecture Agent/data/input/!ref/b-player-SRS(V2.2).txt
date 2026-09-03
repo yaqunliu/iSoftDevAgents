@@ -1,0 +1,144 @@
+﻿B-Player Requirements Specification Document
+1. Introduction
+1.1 Purpose
+This document details the functional requirements, non-functional requirements, and related constraints of the B-Player audio player. It aims to provide a clear development basis for the development team and testing standards for the testing team, ensuring the final product meets user expectations.
+1.2 Scope
+1.2.1 Product Identification
+Product Name: B-Player
+Product Version: 1.0.0
+Product Type: Desktop audio playback software
+1.2.2 Product Function Overview
+B-Player is a lightweight desktop audio player focused on providing core audio playback functions, including playback control, playlist management, volume adjustment, and playback mode switching. It does not include redundant features to maintain lightweight and efficient characteristics.
+1.2.3 Intended Users
+● Users sensitive to player resource consumption
+● Users needing only core playback functions
+● Elderly users accustomed to electromechanical player interfaces
+● Users requiring compact audio players with small screen footprint
+● Visually impaired users (needing interfaces with large buttons and fonts)
+1.3 Definitions, Acronyms, and Abbreviations
+● Audio file: Files on the computer not added to the audio player's playlist, such as ".mp3", ".wav" format files
+● Audio recording: Audio files that have been added to the playlist and can be played
+● Qt: A cross-platform C++ graphical user interface application development framework
+● SRS: Software Requirements Specification
+1.4 References
+● B-Player project GitHub repository: https://github.com/steppbol/b-player
+● Qt Framework official documentation
+● AIMP player product documentation
+● JetAudio player product documentation
+1.5 Overview
+Subsequent chapters of this document will sequentially elaborate on the product's overall description, specific requirements (including functional requirements, external interface requirements, non-functional requirements, etc.) and other related requirements, comprehensively standardizing the development standards for B-Player.
+2. Overall Description
+2.1 Product Perspective
+Many mainstream music players on the current market have issues such as high resource consumption and redundant functions. B-Player aims to fill this market gap by providing a lightweight, efficient, and user-friendly audio playback tool that meets users' needs for core playback functions while maintaining low system resource usage.
+2.2 Product Functions
+B-Player mainly provides the following core functions:
+● Audio playback control (play, stop, previous track, next track, fast forward)
+● Playlist management (add, delete audio files)
+● Playback mode switching (sequential playback, random playback)
+● Volume adjustment
+2.3 User Characteristics
+● Possess basic computer operation skills
+● May include elderly users with low acceptance of complex operation interfaces
+● Some users may have visual impairments and need clear, easy-to-operate interfaces
+2.4 Operating Environment
+● Operating Systems: Windows (mainstream versions), Linux (mainstream distributions)
+● Dependent Framework: Qt framework
+2.5 Design and Implementation Constraints
+● Development Framework: Must use Qt framework for development
+● License: Adopts GNU GPL license to ensure free copying, modification, and distribution of the software
+● Cross-platform Consistency: Maintain consistent functionality and user experience on Windows and Linux platforms
+2.6 Assumptions and Dependencies
+● It is assumed that the user's computer has installed the required runtime environment for the Qt framework
+● When running on Linux systems, due to limitations of the Qt framework's QMediaPlayer element, only ".wav" format files are supported
+● Depends on the normal operation of audio devices and related drivers in the user's system
+3. Specific Requirements
+3.1 Functional Requirements
+3.1.1 Playback Control Functions
+● FR-001: Function Description: Start playing the currently selected audio file in the playlist.
+Input: User clicks the “Play” button or selects a file and presses Enter.
+Processing: The system loads the selected audio file into the Qt QMediaPlayer component and begins decoding the file.
+Output: The selected audio file is played, and the progress bar begins to update.
+● FR-002: Function Description: Stop playback of the current audio file.
+Input: User clicks the “Stop” button.
+Processing: The system sends a stop command to the playback component and resets the playback position.
+Output: Playback halts immediately, and the progress bar resets to the beginning.
+● FR-003: Function Description: Switch to and play the previous audio file in the playlist.
+Input: User clicks the “Previous” button.
+Processing: The system checks the current playlist index. If not at the first item, it loads and plays the previous file.
+Output: The previous audio file starts playing. If already at the first file, no action occurs.
+● FR-004: Function Description: Switch to and play the next audio file in the playlist.
+Input: User clicks the “Next” button.
+Processing: The system checks the current playlist index. If not at the last item, it loads and plays the next file.
+Output: The next audio file starts playing. If already at the last file, no action occurs.
+● FR-005: Function Description: Allow fast forward or rewind of the currently playing audio.
+Input: User drags the progress bar slider.
+Processing: The system calculates the target position based on the slider movement and updates the playback position in the audio stream.
+Output: Audio playback resumes from the new position, and the progress bar updates accordingly.
+
+3.1.2 Playlist Management Functions
+● FR-006: Function Description: Add audio files into the playlist.
+Input: User clicks the “Add” button and selects files in the file browser.
+Processing: The system verifies file formats (.mp3, .wav, etc.), then appends them to the current playlist in memory.
+Output: The new files appear in the playlist UI and are available for playback.
+● FR-007: Function Description: Remove a selected audio file from the playlist.
+Input: User selects a file in the playlist and clicks the “Remove” button.
+Processing: The system deletes the file entry from the playlist data structure in memory.
+Output: The file disappears from the playlist UI and cannot be played until re-added.
+3.1.3 Playback Mode Functions
+● FR-008: Function Description: Enable random playback of audio files.
+Input: User clicks the “Random” button.
+Processing: The system switches playback logic from sequential order to a random selection algorithm.
+Output: The next audio file is chosen randomly from the playlist.
+● FR-009: Function Description: Enable sequential playback of audio files.
+Input: User clicks the “Random” button again (toggle off).
+Processing: The system switches playback logic back to sequential order.
+Output: The next audio file is played in the order it appears in the playlist.
+3.1.4 Volume Adjustment Functions
+● FR-010: Function Description: Adjust the playback volume.
+Input: User clicks the “Volume” button and drags the volume slider.
+Processing: The system maps the slider position to a volume value (e.g., 0–100) and updates the audio output setting.
+Output: Playback volume changes immediately according to the slider position.
+● FR-011: Function Description: Temporarily mute or restore audio.
+Input: User clicks the “Mute” icon or adjusts slider to minimum.
+Processing: The system sets the volume to zero while retaining the previous volume level in memory.
+Output: Playback is muted. When unmuted, the system restores the previous volume setting.
+3.2 External Interface Requirements
+3.2.1 User Interface
+● UI-001: The interface shall contain functional buttons such as "Play", "Stop", "Previous", "Next", "Add", "Remove", "Random", and "Volume"
+● UI-002: The interface shall include a playlist display area for showing added audio files
+● UI-003: The interface shall include a progress bar for displaying the playback progress of the current audio
+● UI-004: The interface design shall support visually impaired users with large buttons and fonts
+● UI-005: The interface design style shall remain consistent across Windows and Linux platforms
+3.2.2 Software Interface
+● SI-001: Developed based on the Qt framework, no interaction with external systems and services
+● SI-002: Able to correctly call the operating system's audio-related interfaces to implement audio playback functions
+3.3 Non-Functional Requirements
+3.3.1 Performance Requirements
+● PN-001: The player's startup time shall be short, with a startup time of no more than 3 seconds on mainstream configuration computers
+● PN-002: The response speed when adding audio files to the playlist shall be fast, with no obvious delay when adding up to 100 audio files
+● PN-003: The delay between button operations (such as play, track switching) and actual changes in music playback status shall be less than 0.5 seconds
+3.3.2 Resource Requirements
+● RN-001: The player's memory usage during operation shall be low, with memory usage not exceeding 50MB when playing a single audio file
+● RN-002: The CPU usage shall remain at a low level, with CPU usage not exceeding 5% under normal playback conditions
+3.3.3 Usability Requirements
+● US-001: The interface shall be concise and intuitive, allowing users to master basic operations without reading complex instructions
+● US-002: Function button labels shall be clear, with operation logic conforming to the usage habits of conventional audio players
+3.3.4 Portability Requirements
+● PT-001: Able to be correctly installed and run on Windows (mainstream versions) and Linux (mainstream distributions) operating systems
+● PT-002: Core functions and user experience shall remain consistent across different operating systems
+3.4 Data Requirements
+● DT-001: Able to recognize and process common audio file formats, supporting at least .mp3, .wav and other formats on Windows platforms, and .wav format on Linux platforms
+● DT-002: Playlist information shall be stored in memory during the player's operation and not persistently stored after the player is closed
+4. Other Requirements (Supplementary)
+4.1 Compatibility Requirements
+● CT-001: Compatible with mainstream Windows operating system versions (such as Windows 10, Windows 11)
+● CT-002: Compatible with mainstream Linux distributions (such as Ubuntu, Fedora)
+4.2 Maintenance Requirements
+● MT-001: Code shall follow good programming standards with good readability and maintainability
+● MT-002: Key functional modules shall be equipped with necessary comments to facilitate understanding of code logic by subsequent development and maintenance personnel
+4.3 Testing Requirements
+● TT-001: Functional testing shall be performed on all functional requirements to ensure proper implementation of functions
+● TT-002: Performance testing shall be conducted to verify whether the player's startup speed, response speed and other performance indicators meet the requirements
+● TT-003: Compatibility testing shall be performed on Windows and Linux platforms respectively to ensure consistency of cross-platform functions
+● TT-004: Manual testing and black-box testing methods shall be adopted in the testing process, focusing on verifying the interaction between modules and the integrity of overall functions
+

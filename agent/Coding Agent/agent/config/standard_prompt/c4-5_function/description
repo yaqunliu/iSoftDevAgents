@@ -1,0 +1,246 @@
+# Task: External API Call Analysis for Backend Methods
+# Mode: Engineering-Grade, Deterministic, SRS-Evidenced
+
+You are performing **External API Call Analysis**.
+
+This task produces a FINAL, IMPLEMENTABLE, and AUDITABLE specification
+that documents all REQUIRED external service interactions
+for each already-approved backend method.
+
+The analysis MUST be:
+- STRICTLY driven by SRS-defined functional responsibilities
+- STRICTLY bounded by system boundaries
+- COMPLETE but MINIMAL
+- FREE of speculation or implementation detail
+
+---
+
+## 1. PURPOSE
+
+Given:
+
+- SRS.md
+- Architectural_Views.md
+- Domain.md
+- Approved Backend Methods JSON
+- Backend Method Functional Specification
+  (including key_functional_points)
+
+Produce an **engineering-grade external API interaction specification**
+for **EVERY approved backend method**.
+
+The output MUST clearly answer:
+
+- Which external systems are involved
+- Which backend methods interact with them
+- For which SRS-defined functional responsibility
+- In which data direction
+
+---
+
+## 2. CORE PRINCIPLE (HIGHEST PRIORITY)
+
+**External API analysis MUST be capability-driven.**
+
+This means:
+
+- `key_functional_points` are the PRIMARY source of truth
+- Steps, method names, or code patterns are SECONDARY signals only
+- No external API call may exist without a corresponding
+  SRS- or plugin-derived functional capability
+
+---
+
+## 3. DEFINITION: External API
+
+An **External API** is:
+
+> Any interaction where the backend system INITIATES communication
+> with a service that exists OUTSIDE the system boundary
+> in order to fulfill an SRS-defined functional responsibility.
+
+Included:
+- Source control platforms (e.g., Git repositories, code hosting services)
+- External analysis or scanning services
+- External notification or collaboration systems
+- External authentication or identity providers
+
+Excluded:
+- Incoming webhooks or callbacks
+- Internal module-to-module calls
+- Database or persistence operations
+- In-memory computation or aggregation
+- Purely internal analysis logic
+
+---
+
+## 4. GLOBAL PROHIBITIONS (ABSOLUTE)
+
+STRICTLY FORBIDDEN:
+
+- Inventing external API calls not explicitly required by SRS
+- Inferring integrations from implementation examples or common practice
+- Describing protocol details (HTTP, headers, payloads, SDKs)
+- Including retries, error handling, or fallback logic
+- Treating AI/LLM usage as external API unless SRS EXPLICITLY states so
+- Documenting inbound webhook reception as external API calls
+
+If an external interaction is NOT explicitly required by SRS,
+IT MUST NOT APPEAR in the output.
+
+---
+
+## 5. MANDATORY ANALYSIS ORDER (DO NOT REORDER)
+
+For EACH backend method, follow this exact sequence:
+
+### Step 1: Capability Inspection
+
+- Enumerate all `key_functional_points` for the method
+- Treat each capability as an independent responsibility
+
+### Step 2: Boundary Crossing Check
+
+For each capability, determine:
+
+- Does fulfilling this capability REQUIRE interaction
+  with a system outside the system boundary?
+
+If NO → do not record any external API call  
+If YES → continue
+
+### Step 3: SRS Evidence Verification
+
+- Verify that SRS.md EXPLICITLY mentions:
+  - the external system, AND
+  - the required interaction
+
+If SRS does NOT explicitly state it → DO NOT RECORD
+
+### Step 4: External API Call Declaration
+
+Only if ALL prior conditions are satisfied,
+declare an external API call mapped to that capability.
+
+---
+
+## 6. SPECIAL RULES FOR COMMON SCENARIOS
+
+### 6.1 Webhooks and External Events
+
+- Receiving webhooks or external callbacks
+  is NOT an external API call
+- Only outbound calls initiated by the system qualify
+
+---
+
+### 6.2 AI / LLM Capabilities
+
+- AI/LLM-related capabilities DO NOT automatically imply external APIs
+- An external AI/LLM API call may be documented ONLY IF:
+  - SRS explicitly requires using an external AI service
+- Otherwise, treat AI processing as internal logic
+
+---
+
+### 6.3 Pipeline, Orchestration, and Analytics
+
+- Pipelines, workflows, aggregation, statistics, and visualization
+  are INTERNAL unless SRS explicitly delegates them to external systems
+- Do NOT document internal computation as external API calls
+
+---
+
+## 7. OUTPUT FORMAT (STRICT)
+
+Return ONLY a single JSON object.
+No explanations. No comments. No markdown.
+
+### Mandatory Structure
+
+{
+  "external_api_analysis": {
+    "modules": {
+      "<ModuleName>": {
+        "methods": {
+          "<methodKey>": {
+            "method_name": "<PascalCaseAction>",
+            "external_api_calls": [
+              {
+                "api_name": "<ExternalServiceName>",
+                "operation": "<SRS-defined action>",
+                "srs_requirement": "<Exact SRS reference>",
+                "purpose": "<One-sentence functional purpose>",
+                "data_direction": "send | receive | bidirectional"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
+
+---
+
+## 8. FIELD SEMANTICS (NON-NEGOTIABLE)
+
+- `api_name`
+  - Must match SRS terminology exactly
+
+- `operation`
+  - Must be a functional verb phrase used in SRS
+  - No endpoint or technical naming
+
+- `srs_requirement`
+  - Must be a precise SRS section or requirement ID
+
+- `purpose`
+  - WHY the external call is needed (business intent)
+  - NOT how it is implemented
+
+- `data_direction`
+  - send: system → external
+  - receive: external → system (initiated by system)
+  - bidirectional: both
+
+---
+
+## 9. COMPLETENESS & VALIDATION RULES
+
+Before finalizing output, ensure:
+
+- Every recorded external API call maps to exactly one capability
+- Every capability that REQUIRES an external API is represented
+- Methods with no external dependencies have empty arrays []
+- No duplicate or inferred external calls exist
+
+The output is INVALID if:
+- Any external API lacks SRS evidence
+- Any capability-driven external dependency is omitted
+- Any internal behavior is misclassified as external
+
+---
+
+## 10. OUTPUT INTENT
+
+This specification is DECLARATIVE.
+
+It must enable:
+- Architecture review
+- Integration planning
+- Contract testing
+- Security and compliance assessment
+
+WITHOUT requiring access to implementation code.
+
+---
+
+## INPUT
+
+SRS.md: {{srs}}
+Architectural_Views.md: {{av}}
+Domain.md: {{domain}}
+Backend_Method_Functional_Specification: {{implementation_spec}}
+
+Begin external API call analysis.

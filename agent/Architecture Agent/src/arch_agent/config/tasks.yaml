@@ -1,0 +1,322 @@
+# # Analyst
+# analysis_task:
+#   description: >
+#     Analyze the software requirements for {project_name}. Your analysis should include:
+#     1. Functional requirements - What the system must do
+#     2. Non-functional requirements - Quality attributes (performance, scalability, security, availability, maintainability)
+#     3. Business constraints - Budget, timeline, regulatory compliance
+#     4. Technical constraints - Technology stack preferences, existing systems to integrate with
+#     5. Key architectural drivers - Critical requirements that significantly impact architecture
+#     6. Stakeholder concerns - Different perspectives from users, developers, operations, management
+#     7. Risk assessment - Technical and business risks
+
+#     Requirements to analyze: {requirements}
+
+#     Consider the current year {current_year} when evaluating technology choices and trends.
+#   expected_output: >
+#     A comprehensive requirements analysis document in markdown format containing:
+#     - Executive Summary
+#     - Functional Requirements (prioritized list)
+#     - Non-Functional Requirements (with measurable criteria)
+#     - Constraints and Assumptions
+#     - Key Architectural Drivers (top 5-7 factors)
+#     - Quality Attribute Scenarios
+#     - Risks and Mitigation Strategies
+#     - Recommendations for architectural approach
+#   agent: unified_agent
+
+analysis_task:
+  description: >
+    Analyze the software requirements for {project_name}. Your analysis should include:
+    1. Functional requirements - What the system must do
+    2. Non-functional requirements - Quality attributes (performance, scalability, security, availability, maintainability)
+    4. Technical constraints - Technology stack preferences or other constraints specified in the SRS.
+
+    Requirements to analyze: {requirements}
+
+    Consider the current year {current_year} when evaluating technology choices and trends.
+  expected_output: >
+    A comprehensive requirements analysis document in markdown format containing:
+    - Executive Summary
+    - Functional Requirements (prioritized list)
+    - Non-Functional Requirements (with measurable criteria)
+    - Constraints and Assumptions
+  agent: unified_agent
+
+# Modeler
+tech_stack_selection:
+  description: >
+    Select the technical stack for {project_name}, including programming languages and frameworks. Only select MUST third party technologies and strictly avoid over-design. You can select no additional technologies if you think it is unnecessary. Justify your choices based on project requirements and constraints.
+    
+    Functional Requirements: {fr}
+
+    Non-Functional Requirements: {nfr}
+
+    Constraints: {con}
+  expected_output: >
+    A technical stack selection document in markdown format containing:
+    - Overview of selected technologies
+    - Justifications for each choice
+    - Comparison with alternatives
+    - Risks and mitigation strategies
+  agent: unified_agent
+
+architectural_style_selection:
+  description: >
+    Choose the architectural style for {project_name} (e.g., microservices, monolith, event-driven).
+    Justify your choice based on project requirements, constraints, and quality attributes.
+
+    Functional Requirements: {fr}
+
+    Non-Functional Requirements: {nfr}
+
+    Constraints: {con}
+
+    Selected Technical Stacks: {tech_stack}
+  expected_output: >
+    An architectural style selection document in markdown format containing:
+    - Description of the chosen architectural style
+    - Justifications for the choice
+    - Comparison with alternatives
+    - Risks and mitigation strategies
+  agent: unified_agent
+
+static_design:
+  description: >
+    Design the static structure of the system for {project_name}, including module decomposition and module relationships. Use UML diagrams to represent the design. Also, the designed modules should be mapped to the use cases in the functional requirements. Focus on the component-level module design with no concrete class-level implementation.
+    
+    Use the minimum number of components possible. If you can't explain why something can't be merged or removed, don't include it. No "future-proofing" or "extensibility" considerations—design only for the stated requirements.
+
+    Functional Requirements: {fr}
+
+    Constraints: {con}
+
+    Selected Technical Stack: {tech_stack}
+
+    Selected Architectural Style: {arch_style}
+  expected_output: >
+    A static design document in markdown format containing:
+    - Module decomposition mapped to functional requirements, along with the corresponding UML package diagram
+    - Component relationships
+    - Justifications for design decisions
+  agent: unified_agent
+
+dynamic_design:
+  description: >
+    Identify the interfaces of the modules defined in the module design and specify the dynamic behavior of the system for {project_name}.
+
+    1. Identify the public interfaces that each component should expose.
+    2. Based on the identified interfaces, create a Component Diagram in plantuml showing the modules and their provided interfaces.
+    3. Map each component to its corresponding functional requirements.
+
+    Use the SIMPLEST design possible. If you can't explain why something can't be merged or removed, don't include it. No "future-proofing" or "extensibility" considerations—design only for the stated requirements.
+
+    Functional Requirements: {fr}
+
+    Constraints: {con}
+
+    Module Design: {static_design}
+  expected_output: >
+    A dynamic design document in markdown format containing:
+    - Interface definitions for each module
+    - Component Diagram (UML) showing modules and interfaces
+    - Mapping of modules to functional requirements
+    - Justifications for design decisions
+  agent: unified_agent
+
+deployment_design:
+  description: >
+    Design the deployment architecture for {project_name}, including infrastructure topology,
+    deployment strategies, and scalability considerations.
+
+    Functional Requirements: {fr}
+
+    Non-Functional Requirements: {nfr}
+
+    Constraints: {con}
+  expected_output: >
+    A deployment design document in markdown format containing:
+    - Infrastructure topology diagram
+    - Deployment strategies
+    - Scalability considerations
+    - Justifications for design decisions
+  agent: unified_agent
+
+
+# # To be implemented, this is currently generated in reference to the paper + chatgpt reference
+# # Designer
+# module_design:
+#   description: >
+#     Design the internal class structure for the component "{component_name}" of {project_name}.
+    
+#     Component Description: {component_description}
+#     Interfaces: {component_interfaces}
+#     Related Functional Requirements: {related_frs}
+
+#     Based on the component definition, first, design the classes that implement this component, and describe the responsibility for each class. Next, design the detailed class names, attributes, methods, and relationships between classes within the component. Finally, use plantuml to draw the class diagram for the component.
+#     Focus on a minimal verifiable system to make it easier to implement. Strictly avoid over-design. Keep the system as concise as possible.
+
+#   expected_output: >
+#     A class design document for the component in markdown format containing:
+#     - List of classes with responsibilities
+#     - Class Diagram (UML) for the component
+#     - Justification for the class design
+#   agent: unified_agent
+
+
+module_design:
+  description: >
+    Design the internal class structure for the component "{component_name}" of {project_name}.
+
+    Component Description: {component_description}
+    Interfaces: {component_interfaces}
+    Related Functional Requirements: {related_frs}
+
+    IMPORTANT DESIGN CONSTRAINTS:
+    - Start with the SIMPLEST possible design. Ask yourself: "Can this be done with just 1 class?" If yes, use 1 class.
+    - Only add a second class if there's a clear, unavoidable reason (e.g., the interface explicitly requires it, or two fundamentally different responsibilities exist).
+    - Maximum 3 classes unless absolutely necessary. If you think you need more, justify each additional class.
+    - Prefer simple functions/methods over separate classes.
+    - Avoid design patterns unless they solve a specific, immediate problem.
+    - No abstract classes or interfaces beyond what's already defined in the component interfaces.
+    - No "future-proofing" or "extensibility" considerations—design only for the stated requirements.
+
+    ANTI-PATTERNS TO AVOID:
+    - Separate "Manager", "Handler", "Factory", "Builder", "Helper", or "Util" classes when the logic can live in the main class
+    - Wrapper classes that just delegate to another class
+    - Data classes that could be simple dictionaries or tuples
+    - Strategy/State patterns when a simple if-else suffices
+
+    Remember: A working simple solution is better than an elegant complex one. The goal is executable code, not architectural perfection.
+
+  expected_output: >
+    A class design document for the component in markdown format containing:
+    - List of classes with responsibilities
+    - Class Diagram (UML) for the component with plantuml
+    - Justification for the class design
+  agent: unified_agent
+
+
+
+
+interface_design:
+  description: >
+    Design detailed interface specifications for each module in {project_name},
+    ensuring that interactions between modules are well-defined, consistent,
+    and aligned with the overall architecture.
+  expected_output: >
+    An interface specification document in markdown format containing:
+    - Public interfaces (methods, functions, APIs) for each module
+    - Input/output parameters, data types, and constraints
+    - Pre-conditions, post-conditions, and error handling behavior
+    - Updated class diagrams reflecting interfaces and key relationships
+  agent: unified_agent
+
+interaction_model_development:
+  description: >
+    Develop interaction models for {project_name} that describe how modules
+    collaborate to implement key use cases and system behaviors.
+  expected_output: >
+    An interaction modeling document in markdown format containing:
+    - Sequence diagrams for key use cases and scenarios
+    - Descriptions of interaction flows between modules and external actors
+    - Identification of synchronous vs asynchronous interactions
+    - Notes on potential performance or reliability considerations in interactions
+  agent: unified_agent
+
+deployment_and_resource_allocation:
+  description: >
+    Refine the deployment and resource allocation plan for {project_name},
+    ensuring that the designed architecture meets system constraints,
+    scalability targets, and performance goals.
+  expected_output: >
+    A deployment and resource planning document in markdown format containing:
+    - Deployment diagrams showing modules mapped to infrastructure components
+    - Resource allocation plans (CPU, memory, storage, network) per component
+    - Assumptions and constraints (e.g., SLAs, scaling strategies, environment types)
+    - Risks, trade-offs, and recommendations related to deployment topology
+  agent: unified_agent
+
+# Evaluator
+architectural_mismatch_analysis:
+  description: >
+    Evaluate the architectural outputs for {project_name}, including class, sequence,
+    and deployment diagrams, to identify mismatches with the functional and
+    non-functional requirements defined in the SRS. Focus on where the current
+    architecture fails to satisfy required behaviors, quality attributes, or constraints.
+  expected_output: >
+    A mismatch analysis report in markdown format containing:
+    - Brief overview of evaluated architectural artifacts (class, sequence, deployment diagrams)
+    - List of detected mismatches with references to specific SRS requirements
+    - Classification of mismatches (functional / non-functional / constraint-related)
+    - Severity assessment and potential impact of each mismatch
+  agent: unified_agent
+
+architectural_root_cause_analysis:
+  description: >
+    Analyze the identified mismatches between the architecture and the SRS for {project_name},
+    and trace them back to their underlying causes, such as requirement misinterpretations,
+    design errors, or resource misallocations.
+  expected_output: >
+    A root cause analysis report in markdown format containing:
+    - Summary of each mismatch and its associated requirement(s)
+    - Hypothesized root cause(s) for each mismatch
+    - Categorization of causes (e.g., requirement ambiguity, design oversight, resource planning issue)
+    - Dependencies or systemic issues that contribute to multiple mismatches
+  agent: unified_agent
+
+refinement_suggestion:
+  description: >
+    Formulate actionable refinement suggestions for {project_name} to address the root causes
+    of architectural mismatches and improve alignment with the system's goals, constraints,
+    and quality requirements.
+  expected_output: >
+    A refinement suggestions document in markdown format containing:
+    - A prioritized list of refinement actions for the architecture
+    - Concrete recommendations for updating class, sequence, and deployment diagrams
+    - Expected impact of each suggestion on functional and non-functional alignment
+    - Any trade-offs, risks, or follow-up evaluations required after applying refinements
+  agent: unified_agent
+
+extractor:
+  description: >
+    From the text below, extract the exact content corresponding to "{term}".
+
+    Text:
+    {text}
+
+    Extraction rules:
+    - Return only the portion of the text that represents the "{term}".
+    - Do NOT paraphrase, summarize, reformat, or reinterpret the text.
+    - Preserve the original wording and structure exactly as found.
+    - If multiple occurrences exist, return all of them in the original order.
+    - If none exist, return "NOT FOUND".
+
+  expected_output: >
+    The exact extracted text for "{term}", with no changes or summarization.
+
+  agent: unified_agent
+
+component_parser:
+  description: >
+    Analyze the provided design text and extract the component architecture details into a structured format.
+    
+    Text to analyze:
+    {text}
+    
+    Your goal is to parse this text and populate the required fields for the component diagram code and the list of component definitions.
+  expected_output: >
+    A structured object containing the component diagram code and the list of component details.
+  agent: unified_agent
+
+class_design_parser:
+  description: >
+    Analyze the provided class design text and extract the class architecture details into a structured format.
+    
+    Text to analyze:
+    {text}
+    
+    Your goal is to parse this text and populate the required fields for the class diagram code and the class definitions description.
+  expected_output: >
+    A structured object containing the class diagram code and the textual description of class details.
+  agent: unified_agent

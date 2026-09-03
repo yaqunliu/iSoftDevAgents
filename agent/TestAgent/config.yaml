@@ -1,0 +1,13 @@
+llm:
+  api_key:
+  base_url:
+  model: 'gpt-5'
+
+dataset:
+  root_path: './datasets'
+
+max_loop: 3
+
+conda:
+  env_path: ''
+

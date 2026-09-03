@@ -1,0 +1,61 @@
+============================================================
+Plugin G: External AI / LLM API Invocation (External API + LLM)
+============================================================
+
+Activation Signals:
+
+- key_functional_points mention: AI, LLM, model inference, semantic analysis, intelligent review
+- external_api_calls mention: LLM, OpenAI, Azure OpenAI, model endpoint, inference API
+- invoked_methods include analyzer / integrator methods whose purpose is AI-based analysis
+- method purpose/description indicates generative or semantic analysis over code/text
+
+Mandatory Capabilities (ALL REQUIRED):
+
+G-1. Client Initialization (Deterministic, Configurable)
+- The Service MUST initialize the LLM client in `__init__` if required by this module
+- Credentials and endpoints MUST NOT be hard-coded in source
+- They MUST be read from runtime configuration (e.g., environment variables or app config)
+- If required configuration is missing → raise NotImplementedError
+
+G-2. Structured Prompt/Input Construction
+- Construct deterministic structured input for the LLM call
+- Separate "system intent" and "user content" if the chosen client API supports roles
+- Input MUST be derived from actual method inputs or prior invoked_method outputs
+- DO NOT fabricate content
+
+G-3. Explicit LLM Invocation
+- Call the LLM via the approved external API client/library available in the codebase context
+- Invocation MUST be concrete and executed (no stubs, no placeholders)
+- If no approved client/library is provided → raise NotImplementedError
+
+G-4. Output Normalization
+- Convert the LLM response into system-consumable primitives
+- Normalization MUST produce fields matching semantic_model output schema
+- Raw client objects MUST NOT be returned
+
+G-5. Traceability Fields (When Defined by semantic_model)
+- If semantic_model output or entity schema includes fields for:
+  - processing_time / duration
+  - status
+  - analysis_result / result text
+  then the implementation MUST populate them from actual execution
+- If such fields are not defined, do NOT invent them
+
+G-6. Persistence and Transaction Rules
+- If semantic_model requires storing AI results in an entity:
+  - create/update via repository methods only
+  - commit/rollback rules MUST follow the unified transaction rule
+- Repository MUST NOT commit
+- Service MUST commit exactly once for the write path
+
+Explicit Prohibitions:
+
+- hard-coded API keys, endpoints, deployment names, model names unless provided by semantic_model
+- fake “analysis_result”
+- returning placeholder strings
+- skipping LLM call while claiming completion
+
+General Client Rule:
+
+- The implementation MAY use any approved LLM client that is explicitly available in the project context
+  (e.g., AzureOpenAI, OpenAI SDK), but MUST keep it configuration-driven and deterministic.

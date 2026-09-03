@@ -1,0 +1,89 @@
+# System files
+.DS_Store
+Thumbs.db
+*.dmg
+
+# Editor settings
+.idea/
+.vscode/
+.claude/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+deploy/docker/*.env
+!deploy/docker/*.env.example
+
+# Node.js / frontend
+node_modules/
+.pnpm-store/
+.npm/
+.turbo/
+.cache/
+.parcel-cache/
+.vite/
+.next/
+.nuxt/
+.svelte-kit/
+coverage/
+dist/
+build/
+*.tsbuildinfo
+
+# Python / agents
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.python-version
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.hypothesis/
+.tox/
+.nox/
+htmlcov/
+.eggs/
+*.egg-info/
+*.db-shm
+*.db-wal
+*.db
+
+# Project-generated files
+.playwright-cli/
+var/
+log/
+memory/
+.trae/
+agent/Architecture Agent/.runtime-home/
+agent/Architecture Agent/local/
+agent/Architecture Agent/data/output/
+agent/Architecture Agent/arch_flow.html
+agent/Requirements Agent/reagent/.runtime-home/
+agent/Requirements Agent/reagent/Users/
+agent/Requirements Agent/reagent/tmp/
+agent/Requirements Agent/reagent/var/
+backend/data/
+agent/platform/data/
+agent/platform/log/
+agent/platform/memory/
+
+# 项目导出的临时文档产物
+docs/project-*.zip
+docs/project-*/

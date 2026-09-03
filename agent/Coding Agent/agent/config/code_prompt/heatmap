@@ -1,0 +1,56 @@
+============================================================
+Plugin F: Statistical Analysis with Visualization Artifact Generation
+============================================================
+
+Activation Signals:
+
+- statistics
+- analytics
+- summary
+- trend
+- timeseries
+- heatmap
+- distribution
+- frequency analysis
+- performance metrics
+- quality metrics over time
+- historical analysis
+
+Mandatory Capabilities (ALL REQUIRED):
+
+F-1. Historical Data Aggregation  
+- Aggregate across MULTIPLE persisted records  
+- Single-record analysis is INVALID
+
+F-2. Analytical Computation  
+- Deterministic analysis (trend, distribution, aggregation)  
+- Raw data passthrough is INVALID
+
+F-3. Visualization Artifact Generation (NON-OPTIONAL)  
+- Generate concrete visualization artifact  
+- Numeric-only or text-only output is FORBIDDEN
+
+F-4. Persistent or Addressable Output  
+- Artifact MUST be persisted or referenceable  
+- In-memory-only artifacts are INVALID
+
+F-5. Result Metadata Exposure  
+- Output MUST expose artifact reference  
+- Claiming success without reference is INVALID
+
+Explicit Prohibitions:
+
+- fake visualization
+- frontend delegation
+- placeholder artifacts
+- success without artifact
+
+Layer Clarification:
+
+- Plugin defines FUNCTIONAL responsibility
+- Visualization MAY occur in Service or invoked integration
+- If not implementable → raise NotImplementedError
+  
+Default Visualization Mapping (Only when semantic_model/SRS does not specify the exact visualization form):
+- For "heatmap" outputs, the default visualization artifact MAY be implemented as a word-frequency based word cloud (or equivalent frequency heat visualization), derived from aggregated textual issue content, as long as it satisfies F-1..F-5 and does not contradict any explicit semantic_model requirement.
+- If semantic_model explicitly specifies a different heatmap definition (e.g., code-location hotspot matrix, file/line distribution, category-by-time grid), that explicit definition MUST override this default.

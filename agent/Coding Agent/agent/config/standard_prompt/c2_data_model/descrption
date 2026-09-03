@@ -1,0 +1,274 @@
+# Task: Extract Architecture-Level Entities with Consistent Relationships and Engineering-Ready Types
+
+You are performing **Architecture-Level Entity Extraction**
+based strictly on the Architecture View (AV).
+
+The goal is to make **architectural data structures explicit**,
+while ensuring the extracted model is:
+
+- structurally consistent
+- relationship-complete
+- engineering-ready (Python models / ORM / schema friendly)
+
+This task is:
+- NOT domain-driven design (DDD)
+- NOT persistence or database design
+- NOT repository or storage implementation
+- NOT code generation
+
+Entities extracted here are **architectural data models**,
+used to explain lifecycle, data flow, and system behavior.
+
+---
+
+## Authority & Scope
+
+### Authoritative Priority (highest → lowest)
+
+1. Architectural_Views.md (AV)
+2. Domain.md
+3. SRS.md
+
+Rules:
+- AV is the single source of truth for:
+  - modules
+  - responsibilities
+  - data flow
+  - lifecycle semantics
+- Domain.md and SRS.md may clarify meaning
+  but MUST NOT override AV structure.
+
+---
+
+## Definition: Architecture-Level Entity
+
+An **Architecture-Level Entity** is:
+
+> A structured business record whose fields, identity,
+> and relationships must be understood to reason
+> about the system architecture.
+
+Clarifications:
+- Entities do NOT imply persistence.
+- Entities do NOT imply repositories or databases.
+- Entities do NOT form a domain layer.
+- Entities exist to document architectural data contracts.
+
+---
+
+## Phase 1 — Identify Structured Records (Data-First)
+
+From AV, identify all structured records that are:
+
+- explicitly defined as classes or structured objects, OR
+- stored, aggregated, or tracked inside modules, OR
+- passed between modules as structured data, OR
+- consumed by downstream modules for reporting or analytics
+
+Rules:
+- Classes themselves are NOT automatically entities.
+- The data structure represented by a class IS the candidate.
+- Focus on data, not services.
+
+Exclude:
+- request payloads
+- helper / utility data
+- purely ephemeral local variables
+
+---
+
+## Phase 2 — Entity Eligibility Decision
+
+A candidate qualifies as an **Architecture-Level Entity**
+IF AND ONLY IF all conditions below are met:
+
+1. It represents a business-relevant concept or outcome.
+2. It has a stable identity (single or composite key).
+3. Its internal structure matters for at least one architectural concern:
+   - lifecycle management
+   - aggregation
+   - reporting
+   - analytics
+4. It is produced, consumed, or transformed by
+   at least one architecturally significant module.
+
+Notes:
+- Cross-module usage is NOT mandatory.
+- Intermediate results are valid entities.
+
+---
+
+## Phase 3 — Entity Minimization & Classification
+
+Reduce candidates to the **smallest sufficient set**.
+
+Rules:
+- Merge records that share identity and lifecycle.
+- Do NOT extract entities purely for symmetry.
+- Classify each entity as:
+  - `core` (lifecycle / control axis), or
+  - `intermediate` (structured outcome or transition).
+- Each entity MUST be assigned to exactly one module defined in Domain.md.
+- Module assignment is part of classification and MUST be resolved before field derivation.
+
+
+---
+
+## Phase 4 — Field Derivation (Engineering-Ready)
+
+For each entity, derive fields using ONLY:
+
+- fields explicitly defined in AV diagrams
+- fields referenced in AV method signatures
+- fields required to explain lifecycle or outcomes
+
+### Type Rules (STRICT)
+
+Field `type` MUST be one of:
+
+**Primitive Types:**
+- `str` - text, identifiers, non-enumerated strings
+- `bool` - binary flags
+- `int` - numeric counters, quantities
+- `float` - decimal values, measurements
+- `datetime` - timestamps, dates
+
+**Structured Types:**
+- `dict` - key-value data, JSON-like structures
+- `list` - ordered collections
+
+**Enumerated Types:**
+- `enum` - MUST be used for fields named `type`, `state`, `status`, or any field with a fixed set of values
+
+### Enum Field Requirements
+
+When a field is declared as `enum`:
+
+1. **Mandatory `enum_values` property:**
+```json
+   "state": {
+     "type": "enum",
+     "enum_values": ["pending", "running", "completed", "failed"],
+     "required": true,
+     "mutable": true
+   }
+```
+
+Rules:
+- Do NOT use abstract semantic types (e.g. EventId, StatusEnum).
+- Semantics must be expressed via field name and description.
+- Types must be directly usable in:
+  - Python models
+  - ORM mappings
+  - SQL / NoSQL schemas
+
+Each entity MUST:
+- have ≥1 identity field
+- have ≥1 non-identity field
+
+---
+
+## Phase 5 — Relationship Modeling (Bidirectional & Consistent)
+
+Define relationships ONLY when explicitly implied by AV semantics.
+
+Rules:
+- Relationships MUST be declared on BOTH entities.
+- Cardinality MUST match on both sides.
+- Direction MUST be consistent.
+
+Allowed relationship types:
+- `1:1`
+- `1:N`
+
+Allowed directions:
+- `parent→child`
+- `child→parent`
+- `bidirectional`
+
+Notes:
+- If relationship ownership is unclear, use identifier fields only.
+- One-sided relationships are FORBIDDEN.
+
+---
+
+## Phase 6 — Repository Capability Inference (Logical Only)
+
+For each entity, infer **logical repository capabilities**
+based solely on AV behavior.
+
+Rules:
+- Repository operations describe **access patterns**, not storage.
+- Do NOT assume databases, tables, or persistence.
+- Operations must correspond to:
+  - methods in AV classes, or
+  - clear lifecycle / access needs implied by AV.
+
+Examples:
+- get_by_id
+- list_by_parent
+- update_state
+- list_active
+
+---
+
+## Phase 7 — Architectural Closure Validation
+
+Validate that:
+
+1. Every relationship is bidirectionally consistent.
+2. Every field is referenced by AV behavior.
+3. Every repository operation maps to an AV responsibility.
+4. No entity exists without a clear architectural role.
+
+If any rule fails, revise earlier phases.
+
+---
+
+## Phase 8 — Output Serialization (STRICT)
+
+Produce a SINGLE JSON object matching EXACTLY the schema below.
+
+Rules:
+- Output JSON only
+- No explanations
+- No comments
+- No additional text
+
+{
+  "entities": {
+    "<EntityName>": {
+      "category": "core | intermediate",
+      "module": "<ModuleName>",
+      "primary_key": {
+        "fields": ["<fieldName>"]
+      },
+      "fields": {
+        "<fieldName>": {
+          "type": "str | bool | int | float | datetime | dict | list",
+          "required": true,
+          "mutable": false
+        }
+      },
+      "relationships": {
+        "<OtherEntity>": {
+          "type": "1:1 | 1:N",
+          "direction": "parent→child | child→parent | bidirectional"
+        }
+      },
+      "repository_operations": {
+        "<operationName>": {
+          "description": "<architectural access purpose>"
+        }
+      }
+    }
+  }
+}
+
+---
+
+## Input
+
+Architectural_Views.md: {{av}}{{add}}
+Domain.md: {{domain}}
+Begin Phase 1.

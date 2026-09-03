@@ -1,0 +1,301 @@
+# Task: Backend Method Functional Specification with Scenario-Driven Plugin Activation
+# Mode: Engineering-Grade, Deterministic, SRS-Evidenced
+
+You are performing **Backend Method Functional Specification**.
+
+This task produces a FINAL, IMPLEMENTABLE, and AUDITABLE specification
+for each already-approved backend method.
+
+The output MUST focus on:
+- WHAT the method must accomplish
+- WHAT core capabilities must be present
+- WHAT SRS-defined functional responsibilities must NOT be omitted
+
+---
+
+## 1. PURPOSE
+
+Given:
+
+- SRS.md
+- Architectural_Views.md
+- Domain.md
+- Approved Backend Methods JSON
+
+Produce an **engineering-grade functional specification**
+for **EVERY approved backend method**.
+
+The specification MUST:
+
+- Be COMPLETE in terms of required capabilities
+- Be MINIMAL (no speculative or optional behavior)
+- Be STRICTLY traceable to SRS
+- Be DETERMINISTIC and implementation-agnostic
+- Represent a FINAL functional contract
+
+---
+
+## 2. GLOBAL PROHIBITIONS (HIGHEST PRIORITY)
+
+STRICTLY FORBIDDEN:
+
+- Inventing new business behavior not defined in SRS
+- Adding new first-party APIs or internal helper methods
+- Reinterpreting or extending domain semantics
+- Describing UI, transport, storage, or framework details
+- Using speculative or defensive language
+  (e.g. “could”, “might”, “future extension”)
+
+If a required behavior cannot be traced to SRS,
+IT MUST NOT BE INCLUDED.
+
+---
+
+## 3. FUNCTIONAL SPECIFICATION MODEL
+
+Each method specification MUST contain:
+
+- method_name
+- type (external_api | internal_function)
+- purpose
+- trigger
+- steps
+- invoked_methods
+- key_functional_points
+
+No other sections are allowed.
+
+---
+
+## 4. CORE OUTPUT SEMANTICS
+
+### 4.1 steps
+
+- steps describe the **ordered execution flow**
+- steps MUST be concrete, observable, and testable
+- steps MUST NOT omit SRS-required capabilities
+
+### 4.2 key_functional_points (MANDATORY)
+
+`key_functional_points` represent the **irreducible functional capabilities**
+that the method MUST provide to satisfy SRS intent.
+
+They are NOT:
+- step restatements
+- implementation details
+
+They ARE:
+- capability-level assertions
+- invariant responsibilities of the method
+
+---
+
+## 5. AUTOMATIC SCENARIO-DRIVEN PLUGIN ACTIVATION (CORE RULE)
+
+When analyzing a method, you MUST perform **Scenario Detection**.
+
+If the method’s name, purpose, trigger, steps, or invoked_methods
+indicate participation in a recognized scenario,
+you MUST activate the corresponding scenario plugin.
+
+Activating a plugin means:
+- Identifying SRS-defined responsibilities for that scenario
+- Injecting the REQUIRED capabilities into key_functional_points
+- WITHOUT adding new behavior beyond SRS
+
+Plugins DO NOT add behavior.
+Plugins ONLY prevent omission of required capabilities.
+
+
+---
+
+## NOTE: Immediate Orchestration After Third-Party Requests (CRITICAL)
+
+Some `external_api` endpoints that ingest third-party events (e.g., webhooks) may **immediately trigger downstream task execution** as part of the same request-driven workflow.
+
+### Specification Requirements
+- When analyzing a method’s `steps` and `invoked_methods`, you MUST detect and specify **same-request orchestration** when implied by:
+  - the method purpose/trigger (e.g., “webhook ingestion”, “callback”),
+  - scenario plugins (e.g., External Event Ingestion + Pipeline Execution),
+  - or SRS language indicating immediate processing.
+
+### Consequences
+- If a webhook ingestion external_api is expected (by SRS) to immediately start code review tasks:
+  - The webhook method’s `steps` MUST include the downstream task invocation steps in correct order.
+  - The webhook method’s `invoked_methods` MUST include the downstream service calls that start the tasks (if present in Approved_Methods.json).
+- Do NOT treat ingestion as an isolated terminal action when the scenario implies immediate execution.
+
+---
+
+## 6. SCENARIO PLUGIN DEFINITIONS (GENERALIZED)
+
+### Plugin A: External Event Ingestion
+
+**Activation Signals (non-exhaustive):**
+- external event
+- webhook
+- callback
+- third-party notification
+- incoming payload
+- event ingestion
+
+**Mandatory Capabilities to Capture:**
+- External source validation or trust verification
+- Event type or intent identification
+- Payload normalization and extraction
+- Context construction for downstream processing
+- Idempotent or repeat-safe event handling (if defined in SRS)
+
+---
+
+### Plugin B: AI / LLM Invocation
+
+Activation Signals (non-exhaustive):
+- AI
+- LLM
+- model inference
+- language model
+- intelligent analysis
+- semantic analysis
+- natural language processing
+- reasoning over text or code
+- generative processing
+
+Mandatory Capabilities to Capture:
+- Construction of structured input for AI / LLM invocation
+- Selection of task intent or analysis objective as part of the input
+- Invocation of an AI / LLM mechanism as defined by SRS
+- Normalization of AI / LLM outputs into system-consumable representations
+- Preservation of input–output traceability for downstream usage
+
+
+---
+
+### Plugin C: Multi-Step or Pipeline-Oriented Execution
+
+**Activation Signals:**
+- pipeline
+- workflow
+- multi-stage
+- orchestration
+- aggregate results
+- sequential tasks
+
+**Mandatory Capabilities:**
+- Context propagation across steps
+- Deterministic execution order
+- Intermediate result collection
+- Final result aggregation or consolidation
+
+---
+
+### Plugin D: External System Interaction
+
+**Activation Signals:**
+- third-party API
+- external system
+- remote service
+- synchronization
+- outbound integration
+
+**Mandatory Capabilities:**
+- External request preparation
+- Response interpretation
+- Failure surface awareness (no handling logic described)
+- Mapping external responses to internal meaning
+
+
+---
+
+### Plugin E: Statistical, Analytical, or Trend Computation
+
+**Activation Signals:**
+- summary
+- statistics
+- metrics
+- trend
+- distribution
+- heatmap
+- time series
+- aggregation over time
+
+**Mandatory Capabilities:**
+- Data aggregation across multiple records
+- Metric or feature extraction
+- Comparative or temporal analysis
+- Output structuring for downstream consumption
+
+---
+
+
+
+## 7. DETERMINISM & COMPLETENESS GUARANTEE
+
+- If a plugin is activated, its mandatory capabilities MUST appear in key_functional_points
+- If SRS defines a capability, it MUST NOT be omitted
+- If SRS does NOT define it, it MUST NOT be invented
+- No alternative paths unless explicitly stated in SRS
+
+---
+
+## 8. FAILURE CONDITIONS (FOR THE MODEL)
+
+The specification is INVALID if:
+
+- A scenario is clearly present but its plugin is not activated
+- A plugin is activated but mandatory capabilities are missing
+- key_functional_points merely repeat steps
+- Any capability cannot be traced to SRS intent
+
+---
+
+## 9. OUTPUT FORMAT (STRICT)
+
+Return ONLY the structured specification.
+No explanation. No commentary. No examples.
+
+### Mandatory Top-Level Structure
+{
+  "implementation_spec": {
+    "modules": {
+      "<ModuleName>": {
+        "methods": {
+          "<methodKey>": {
+            "method_name": "<PascalCaseAction>",
+            "type": "external_api | internal_function",
+
+            "purpose": "",
+            "trigger": "",
+            "steps": [],
+
+            "invoked_methods": [
+              {
+                "module": "<ModuleName>",
+                "method": "<MethodName>",
+                "purpose": "<one-sentence implementation purpose>"
+              }
+            ],
+
+            "key_functional_points": [
+            {
+                "capability": "<ShortCapabilityName>",
+                "description": "<Concise, testable description of the required capability>",
+                "source": "SRS | Plugin:<PluginName>"
+            }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
+
+---
+
+## INPUT
+
+SRS.md: {{srs}}
+Architectural_Views.md: {{av}}
+Domain.md: {{domain}}
+Data_Model.json: {{data_model}}
+Approved_Methods.json: {{module}}

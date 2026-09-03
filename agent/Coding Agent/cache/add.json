@@ -1,0 +1,99 @@
+{
+    "component_diagram": "@startuml\npackage \"代码审查管理平台\" {\n    [Webhook & Event Ingestion] as Webhook\n    [Review/Event Tracking] as EventTracking\n    [Rule Management] as RuleMgmt\n    [Code Analysis Engine] as AnalysisEngine\n        [Analyzer Integrators] as Analyzers\n    [Reporting & Feedback] as Reporting\n    [Analytics & Statistics] as Analytics\n\n    Webhook --> EventTracking : createEvent(), updateEvent()\n    EventTracking --> AnalysisEngine : run_pipeline(), run_task()\n    AnalysisEngine --> Analyzers : analyze_security(), etc.\n    AnalysisEngine --> RuleMgmt : get_active_rules()\n    AnalysisEngine --> Reporting : submit_report()\n    Reporting --> Analytics : store_report(), get_trend_data()\n}\n@enduml",
+    "components": [
+        {
+            "name": "Webhook & Event Ingestion",
+            "interfaces": [
+                "POST /api/webhook/gitlab",
+                "POST /api/event/manual-trigger"
+            ],
+            "description": "Handles inbound GitLab webhooks and exposes APIs for external/manual event triggering. Parses, verifies, and forwards events to the review lifecycle.",
+            "related_functional_requirements": [
+                "1.1 GitLab Webhook Integration",
+                "1.9 System Configuration (API, security)"
+            ]
+        },
+        {
+            "name": "Review/Event Tracking",
+            "interfaces": [
+                "GET /api/events/pending",
+                "GET /api/events/{event_id}",
+                "POST /api/events/{event_id}/trigger",
+                "POST /api/events/{event_id}/update-state"
+            ],
+            "description": "Manages the review event lifecycle, state tracking, and analysis triggers. Exposes query and state transition endpoints.",
+            "related_functional_requirements": [
+                "1.4 Event/Review Tracking",
+                "1.5 Execution Triggers & Sub-Tasks",
+                "1.9 System Configuration (API, security)"
+            ]
+        },
+        {
+            "name": "Rule Management",
+            "interfaces": [
+                "GET /api/rules",
+                "POST /api/rules",
+                "PUT /api/rules/{rule_id}",
+                "DELETE /api/rules/{rule_id}"
+            ],
+            "description": "CRUD management and validation for code review rules and prompts. Supplies active rules for analysis pipelines.",
+            "related_functional_requirements": [
+                "1.3 Rule Management",
+                "1.2 Automated Code Analysis Pipeline"
+            ]
+        },
+        {
+            "name": "Code Analysis Engine",
+            "interfaces": [
+                "run_pipeline(event_id: str, tasks: List[str]) → dict (internal)",
+                "run_task(event_id: str, task: str) → dict (internal)"
+            ],
+            "description": "Core entrypoint to automated review pipelines. Orchestrates analysis sub-tasks and coordinates results aggregation.",
+            "related_functional_requirements": [
+                "1.2 Automated Code Analysis Pipeline",
+                "1.5 Execution Triggers & Sub-Tasks"
+            ]
+        },
+        {
+            "name": "Analyzer Integrators",
+            "interfaces": [
+                "analyze_security(event_id, code, rule) -> Report (internal)",
+                "analyze_lint(event_id, code, rule) -> Report (internal)",
+                "analyze_performance(event_id, code, rule) -> Report(internal)"
+            ],
+            "description": "Internal synchronous services/classes that perform concrete code analysis tasks for each specialized domain (security, lint, performance).",
+            "related_functional_requirements": [
+                "1.2 Automated Code Analysis Pipeline",
+                "1.5 Execution Triggers & Sub-Tasks"
+            ]
+        },
+        {
+            "name": "Reporting & Feedback",
+            "interfaces": [
+                "GET /api/reports/{event_id}",
+                "POST /api/reports/{event_id}/gitlab-comment",
+                "POST /api/reports/{event_id}/feedback"
+            ],
+            "description": "Persists and surfaces review results, automates merge request comments, and handles developer feedback ingestion.",
+            "related_functional_requirements": [
+                "1.6 Automated Feedback and Reporting",
+                "1.7 Quality Feedback & Analytics",
+                "1.9 System Configuration (API, security)"
+            ]
+        },
+        {
+            "name": "Analytics & Statistics",
+            "interfaces": [
+                "GET /api/analytics/summary",
+                "GET /api/analytics/heatmap",
+                "GET /api/analytics/timeseries",
+                "POST /api/analytics/report/{report_id}/decision"
+            ],
+            "description": "Aggregates review/feedback data and exposes analytics endpoints to measure efficiency, trends, and quality metrics.",
+            "related_functional_requirements": [
+                "1.7 Quality Feedback & Analytics",
+                "1.11 API for Analytics & Reporting"
+            ]
+        }
+    ]
+}

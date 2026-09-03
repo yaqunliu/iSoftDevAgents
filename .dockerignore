@@ -1,0 +1,41 @@
+.git
+.gitignore
+.pytest_cache
+.venv
+**/.venv
+__pycache__
+**/__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# 前端本地依赖与构建产物
+frontend/node_modules
+frontend/scripts/node_modules
+frontend/artifacts/ai-design-platform/node_modules
+frontend/artifacts/ai-design-platform/dist
+
+# 平台运行时残留
+agent/platform/data
+agent/platform/log
+agent/platform/memory
+agent/platform/.env.local
+
+# 各 Agent 本地运行残留
+agent/**/data/output
+agent/**/data/projects
+agent/**/data/agent-debug
+agent/**/data/uploads
+agent/**/.pytest_cache
+
+# 文档与大体积目录
+# 当前镜像运行并不依赖 docs 内的内容，先排除避免上下文过大
+docs
+
+# 其他本地残留
+.DS_Store
+.trae
+log
+memory
+output
+var

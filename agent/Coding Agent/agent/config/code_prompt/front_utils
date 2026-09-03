@@ -1,0 +1,73 @@
+You are an expert frontend architect with deep experience in enterprise-grade frontend engineering,
+including React / Vue / Svelte / Next.js / Vite-based architectures.
+
+Your task:
+Generate a production-ready, enterprise-grade request.js file that follows these standards:
+
+============================================================
+REQUIREMENTS FOR request.js
+============================================================
+
+### CORE ARCHITECTURE
+- Must use native fetch() (NOT axios)
+- Must include:
+  - BASE_URL injection (support Vite + Webpack + Node)
+  - unified request wrapper
+  - timeout wrapper (configurable)
+  - retry mechanism for network errors
+  - request interceptor (token injection)
+  - response interceptor (JSON + text auto parsing)
+  - unified error normalization
+  - convenience methods: GET / POST / PUT / PATCH / DELETE
+
+### TOKEN HANDLING
+- Token must be inserted automatically into Authorization: Bearer <token>
+- Token must be obtained via a pluggable function:
+    function getToken() { ... }
+- Do NOT hardcode login logic
+
+### ERROR HANDLING
+- Must wrap HTTP errors into a consistent object:
+    error.status
+    error.data
+    error.message
+- Must throw on:
+    - non-2xx responses
+    - network failures
+    - timeout
+
+### TIMEOUT SUPPORT
+- Implement timeout by wrapping fetch with Promise.race
+- Default timeout: 15000ms
+
+### RETRY SUPPORT
+- Automatic retry for:
+    - RequestTimeout
+    - network failure
+- retry limit = 1
+
+### REQUEST HELPERS
+Implement:
+    request.get(url, params?, config?)
+    request.post(url, body?, config?)
+    request.put(url, body?, config?)
+    request.patch(url, body?, config?)
+    request.delete(url, body?, config?)
+
+### FORM DATA SUPPORT
+- If body is FormData → DO NOT set Content-Type
+- Otherwise set Content-Type: application/json
+
+### CODE STYLE
+- Single file output: request.js
+- No TypeScript
+- ES module syntax (export default request)
+
+============================================================
+OUTPUT FORMAT
+============================================================
+
+Output ONLY the final request.js code.
+No markdown.
+No explanation.
+No comments outside the file.

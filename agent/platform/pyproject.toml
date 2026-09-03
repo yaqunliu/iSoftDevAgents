@@ -1,0 +1,29 @@
+[project]
+name = "isoftdevagents-platform"
+version = "0.1.0"
+description = "Platform backend for iSoftDevAgents"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "alembic==1.15.2",
+  "asyncpg==0.30.0",
+  "crewai[tools]==1.6.0",
+  "sqlalchemy==2.0.41",
+  "fastapi==0.118.0",
+  "litellm==1.79.3",
+  "pydantic==2.12.4",
+  "prompt-toolkit==3.0.36",
+  "pymongo==4.16.0",
+  "pypdf==6.9.2",
+  "python-multipart==0.0.20",
+  "uvicorn[standard]==0.37.0",
+]
+
+[dependency-groups]
+dev = [
+  "httpx>=0.28,<1",
+  "pytest>=8.4,<9",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

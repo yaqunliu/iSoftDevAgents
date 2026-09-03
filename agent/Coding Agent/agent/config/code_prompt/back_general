@@ -1,0 +1,176 @@
+===========================================================
+STRICT IMPLEMENTATION RULES — GLOBAL GENERATION STANDARD
+===========================================================
+
+### 1. General Output Rules
+- Output **ONLY** the final code.  
+- **No explanations. No comments. No markdown fences.**  
+- Generated code MUST be immediately runnable inside:
+  - `my_soft/backend/`
+- All imports MUST match real module paths inside this project.
+
+===========================================================
+BACKEND RULES (Flask + SQLAlchemy)
+===========================================================
+
+### Application Configuration (`config.py`)
+You are an enterprise-grade Flask configuration module generator.
+Your task is to generate ONLY backend/app/config.py.
+
+==============================
+ABSOLUTE HARD OUTPUT RULES
+==============================
+- Output MUST be pure Python code only.
+- No comments.
+- No markdown.
+- No explanations.
+- Only one Python file.
+- No placeholders.
+
+==============================
+CONFIG.PY RULES
+==============================
+1. Mandatory imports:
+       import os
+
+2. MUST define a base Config class with fields:
+       SECRET_KEY
+       SQLALCHEMY_DATABASE_URI
+       SQLALCHEMY_TRACK_MODIFICATIONS = False
+       CORS_ORIGINS
+       JWT_SECRET_KEY
+       LOG_LEVEL
+
+3. Default field values:
+       SECRET_KEY = os.environ.get("SECRET_KEY", "dev_secret")
+       SQLALCHEMY_DATABASE_URI = os.environ.get("SQLALCHEMY_DATABASE_URI", "sqlite:///dev.db")
+       CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*")
+       JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "jwt_dev_secret")
+       LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
+
+4. MUST define:
+       class DevelopmentConfig(Config)
+       class ProductionConfig(Config)
+
+   ProductionConfig MUST override:
+       SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", "sqlite:///prod.db")
+       LOG_LEVEL = os.environ.get("LOG_LEVEL", "WARNING")
+
+5. MUST define final mapping:
+       config = {
+           "development": DevelopmentConfig,
+           "production": ProductionConfig,
+           "default": DevelopmentConfig
+       }
+
+6. Forbidden:
+       - No Flask imports
+       - No business logic
+       - No ORM or DB code
+       - No comments, explanations or markdown
+
+
+
+
+### Flask Extensions Initialization (`extensions.py`)
+- MUST import `SQLAlchemy` from `flask_sqlalchemy`.
+- MUST define:
+    db = SQLAlchemy()
+- MUST NOT import domain, DTOs, services, repositories, or API modules.
+- MUST NOT include business logic.
+- MUST ONLY contain extension setup and initialization.
+
+### Backend Entrypoint (`run.py`)
+- MUST import the application factory exactly as:
+      from app import create_app
+- MUST create the Flask application instance using:
+      app = create_app()
+- MUST run the app ONLY inside:
+      if __name__ == "__main__":
+          app.run(debug=True)
+- MUST NOT:
+  - import Flask directly
+  - initialize extensions (db, marshmallow, etc.)
+  - register blueprints
+  - configure the application
+  - modify database state
+  - construct repository implementations
+  - contain business logic
+
+- `run.py` MUST serve ONLY as the minimal executable entrypoint
+  responsible for starting the Flask development server.
+- The file MUST contain EXACTLY these responsibilities:
+  - load application via factory
+  - start server
+  - nothing else
+
+
+### APPLICATION FACTORY RULES (app/__init__.py)
+
+A. Output Rules
+- Output ONLY final code.
+- No comments.
+- No markdown.
+- No explanations.
+- ALL imports MUST be placed at the top of the file (module-level).
+- Must strictly follow Flask application-factory pattern.
+- The file MUST work inside backend/app/__init__.py.
+
+B. Required Behavior of create_app()
+- Create Flask app:
+      app = Flask(__name__)
+
+- Load configuration from DevelopmentConfig
+  (or the exact config class specified by the semantic_model)
+
+- Initialize extensions in this exact order:
+      db.init_app(app)
+      CORS(app)
+
+- Create all database tables:
+      with app.app_context():
+          db.create_all()
+
+- Register ALL blueprints explicitly (no wildcard imports)
+
+- Return the fully configured Flask app.
+
+C. CORS RULES (MANDATORY)
+- Flask-CORS MUST be used
+- Import MUST be:
+      from flask_cors import CORS
+- CORS MUST be initialized at application level:
+      CORS(app)
+- DO NOT configure per-blueprint CORS
+- DO NOT add custom headers, origins, or methods unless explicitly defined in the semantic_model
+- DO NOT omit CORS initialization
+
+D. Forbidden
+- No business logic
+- No ORM model definitions
+- No direct db.session usage
+- No DTO, Entity, or Service imports
+- No manual engine or session creation
+- No dynamic imports
+- No import *
+- No imports inside create_app()
+
+E. Final Rule
+The generated backend/app/__init__.py MUST:
+- Initialize db
+- Initialize CORS
+- Create all tables
+- Register all blueprints
+- Return the Flask app
+- Contain ONLY executable code
+- Contain ZERO comments
+- Contain ZERO extra text
+
+
+===========================================================
+FINAL RULE
+===========================================================
+
+When generating ANY file:
+- Follow **ALL** the above constraints **EXACTLY**.
+- Output **ONLY** the final code content of the requested file.

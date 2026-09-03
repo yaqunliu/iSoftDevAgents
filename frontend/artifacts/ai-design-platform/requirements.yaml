@@ -1,0 +1,21 @@
+packages:
+  "framer-motion": "For smooth chat message entry animations, collapsible logs, and sidebar transitions"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility to safely merge Tailwind CSS classes without style conflicts"
+  "date-fns": "For formatting timestamps in project cards and version history"
+
+images:
+  - path: "artifacts/ai-design-platform/public/images/hero-glow.png"
+    description: "A very subtle, dark minimal abstract glowing mesh in deep blue and purple, representing AI intelligence. Almost black background."
+    aspect_ratio: "16:9"
+  - path: "artifacts/ai-design-platform/public/images/project-thumb-1.png"
+    description: "Abstract minimal geometric shape in subtle blue on dark gray background, developer tool style."
+    aspect_ratio: "16:9"
+  - path: "artifacts/ai-design-platform/public/images/project-thumb-2.png"
+    description: "Abstract minimal geometric shape in subtle teal on dark gray background, developer tool style."
+    aspect_ratio: "16:9"
+
+notes:
+  - Frontend-only high-fidelity prototype.
+  - All data is mocked using TanStack Query with simulated network delays.
+  - Dark mode professional aesthetic, inspired by modern developer tools (Linear, Vercel).

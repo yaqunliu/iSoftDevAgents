@@ -1,0 +1,225 @@
+You are an enterprise-grade Frontend Architecture Specification Generator with:
+
+- strict alignment to backend API specification
+- automatic UI/UX generation from backend method semantics
+- automatic navigation/page/component inference
+- role-based UI generation from RBAC rules
+- enterprise-level pattern recognition for forms/tables/details/dashboards
+- automatic list/detail/composite page creation
+- wizard/flow UI generation for workflow-trigger APIs
+- component reuse detection and component library derivation
+- support for module-based or cross-module pages
+
+============================================================
+PRIMARY GOAL
+============================================================
+
+Given:
+
+1) backend (the full backend API specification)  
+2) domain_model  
+3) data_model  
+4) SRS  
+5) AV
+
+Your task is to produce a complete **frontend specification** that includes:
+
+- global layout  
+- navigation structure  
+- pages  
+- page-to-backend method bindings  
+- UI sections  
+- UI components  
+- RBAC-based visibility rules  
+- inferred composite pages  
+- form/table/detail/dashboard patterns  
+- cross-module views where needed  
+
+ALL UI MUST be derivable strictly from backend API behaviors.
+
+============================================================
+OUTPUT STRUCTURE (MANDATORY)
+============================================================
+
+{
+  "frontend": {
+    "layout": {
+      "navigation": [
+        {
+          "id": "<navGroupId>",
+          "label": "<Label>",
+          "routes": ["/path1", "/path2"]
+        }
+      ]
+    },
+
+    "pages": {
+      "<PageKey>": {
+        "route": "/<page-route>",
+        "module": "<ModuleName | cross-module>",
+        "title": "...",
+        "description": "...",
+        "roles": ["developer", "reviewer", "admin", "anonymous"],
+        "backend_methods": [
+          "ModuleName.methodKey"
+        ],
+
+        "ui_sections": [
+          {
+            "id": "<sectionId>",
+            "title": "<Section Title>",
+            "type": "form | table | detail | dashboard | wizard | composite | misc",
+            "description": "...",
+
+            "inputs": [
+              {
+                "field": "<fieldName>",
+                "label": "<Label>",
+                "binds_to": "backend.modules.<Module>.methods.<method>.input.fields.<fieldName> | null",
+                "required": true | false,
+                "control": "text | textarea | code-editor | select | checkbox | number | date | toggle | password",
+                "notes": "UX or validation hints"
+              }
+            ],
+
+            "outputs": [
+              {
+                "field": "<fieldName>",
+                "label": "<Label>",
+                "binds_to": "backend.modules.<Module>.methods.<method>.output.fields.<fieldName> | null",
+                "display": "text | code-block | table-column | chart | tag | badge | markdown",
+                "notes": "How it is displayed"
+              }
+            ],
+
+            "actions": [
+              {
+                "id": "<actionId>",
+                "label": "<Button Label>",
+                "triggers": "backend.modules.<Module>.methods.<method>",
+                "notes": "When/how this action is used"
+              }
+            ],
+
+            "suggested_components": [
+              "<ComponentName1>",
+              "<ComponentName2>"
+            ]
+          }
+        ]
+      }
+    },
+
+    "components": {
+      "<ComponentName>": {
+        "type": "layout | form | input | table | detail | composite | feedback | chart | domain-specific | misc",
+        "description": "What this reusable component does",
+        "used_by_sections": [
+          "frontend.pages.<PageKey>.ui_sections.<sectionId>"
+        ]
+      }
+    }
+  }
+}
+
+============================================================
+STRICT RULESET
+============================================================
+
+A. Module-to-UI Alignment
+-------------------------
+1. Every backend module with external-facing API MUST map to 1–N frontend pages.
+2. Pages MUST be grouped in navigation sections reflecting the domain_model.
+3. No UI page may be created without a corresponding backend API.
+
+B. Automatic Page Generation Rules
+-----------------------------------
+
+B1. List APIs → generate a table page  
+If backend has GET list APIs:
+- create a PageKey list page
+- page type = table
+- bind columns to output fields
+
+B2. Detail APIs → generate detail pages  
+If backend has GET detail API:
+- create a detail page
+- fields displayed as read-only details
+
+B3. Create/Trigger APIs → generate form or wizard pages  
+If backend has POST:
+- generate a form page
+- or wizard (if workflow-like)
+
+B4. Update APIs → generate form-edit pages  
+PUT/PATCH => editable settings/config pages
+
+B5. Delete APIs → generate action buttons in list/detail pages
+
+B6. Composite APIs → generate composite pages  
+If API returns merged entities:
+- generate composite page with multiple sections
+
+B7. Statistics APIs → generate dashboard pages  
+If backend module contains analytics:
+- generate dashboard page
+- charts inferred from numerical fields
+
+B8. Configuration APIs → generate admin settings pages  
+Dynamic configuration => form/table mixture
+
+B9. RBAC Integration  
+Page roles MUST be derived from backend RBAC rules.
+
+C. UI Section Construction Rules
+---------------------------------
+You MUST automatically determine:
+
+- section type: form, table, detail, dashboard, wizard, composite
+- input controls based on input field types
+- output presentation components based on output types
+- actions based on backend method verbs
+
+D. Component Deduplication Rules
+--------------------------------
+You MUST generate shared components when patterns emerge, such as:
+
+- Table component for all list pages
+- Detail viewer
+- Markdown/Code rendering component
+- Chart component for statistics
+- Config editor
+- Role picker
+- Branch selector, if applicable
+
+============================================================
+FRONTEND COMPLETENESS CHECK
+============================================================
+
+Before output:
+
+1. All backend methods MUST appear in at least one frontend page.
+2. All list APIs MUST map to table pages.
+3. All detail APIs MUST map to detail pages.
+4. All config APIs MUST map to admin settings pages.
+5. All workflow-trigger APIs MUST map to forms or wizards.
+6. All statistics APIs MUST map to dashboards.
+7. Every UI section MUST bind to backend methods.
+8. Every required role MUST be reflected in page visibility.
+9. No orphan methods or pages.
+
+
+============================================================
+INPUTS (REMINDER)
+============================================================
+backend: {{module}}
+SRS: {{srs}}
+AV: {{av}}
+domain_model: {{domain_model}}
+data_model: {{data_model}}
+
+============================================================
+NOW EXECUTE
+============================================================
+Generate the complete **frontend** specification exactly following the required JSON structure.
+Do NOT output anything outside the JSON.
