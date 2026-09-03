@@ -1,0 +1,56 @@
+# 教学注释：
+# 这个文件只做一件事：在最外层接住公网流量，自动申请 / 续期 Let's Encrypt 证书，
+# 然后把请求原样转给内网的 web 容器（也就是现有那个 nginx）。
+#
+# 为什么不动 nginx.conf：
+# nginx 继续只监听容器内的 80 端口，它前面是 Caddy，后面是 backend。
+# 证书这件事完全被 Caddy 接管，nginx 不需要知道 https 的存在。
+#
+# 两个变量从容器环境变量读取（见 docker-compose.yml 的 caddy 服务）：
+#   ISOFTDEVAGENTS_SITE_DOMAIN   域名，例如 gmonkey.ai
+#   ISOFTDEVAGENTS_ACME_EMAIL    Let's Encrypt 证书到期提醒邮箱，必须是真实邮箱
+
+{
+	# 这是证书到期提醒邮箱。
+	# 没设置这个环境变量时，这一行会变成一个没有参数的 email 指令，Caddy 直接启动失败。
+	# 这是故意的：宁可在启动时就报错，也不要等证书快到期了才发现通知没人收得到。
+	email {$ISOFTDEVAGENTS_ACME_EMAIL}
+
+	# 调试注释：
+	# 调流程时可以先打开下面这行，走 Let's Encrypt 的 staging 环境。
+	# staging 签出来的证书浏览器不认（会报"不受信任"），但它没有正式环境
+	# 「同一组域名每周 5 张」的速率限制，适合反复试。
+	# 流程跑通后一定要注释回去，并且清掉卷里的 staging 缓存，否则不会重新签正式证书：
+	#   docker compose stop caddy && docker volume rm <项目名>_caddy_data
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+
+	servers {
+		# 只开 HTTP/1.1 和 HTTP/2。
+		# HTTP/3 走 UDP 443，而部署手册和云安全组只放通了 TCP 443。
+		# 如果留着 h3，Caddy 会在响应头里通告一个根本连不上的 h3 端点，
+		# 浏览器要先尝试失败再回落到 TCP，白白多一次往返。
+		protocols h1 h2
+	}
+}
+
+{$ISOFTDEVAGENTS_SITE_DOMAIN} {
+	# 说明：
+	# 站点块这里只写域名、不写端口，Caddy 会自动做两件事：
+	#   1. 监听 443，并为这个域名签发 / 续期证书
+	#   2. 在 80 端口挂一个 308 跳转，把 http 请求全部转到 https
+	# 所以不需要再手写跳转规则。
+	reverse_proxy web:80 {
+		# 关键：关掉响应缓冲。
+		# 平台有 WebSocket 和长时间的流式输出（Agent 生成），
+		# 一旦被代理层缓冲，前端就会表现成"卡住不动、最后一次性刷出来"。
+		# WebSocket 的 Upgrade 握手 Caddy 会自动透传，不需要额外配置。
+		flush_interval -1
+	}
+}
+
+# 以后要加 www 的步骤：
+#   1. 先在 DNS 给 www 加一条 A 记录指向同一个 IP，用 dig 确认已生效
+#   2. 把上面的站点地址改成：{$ISOFTDEVAGENTS_SITE_DOMAIN}, www.{$ISOFTDEVAGENTS_SITE_DOMAIN}
+#   3. docker compose up -d --force-recreate caddy
+# 注意：证书里写了几个域名，Let's Encrypt 就会逐个验证，
+# 只要有一个解析不到，是整次签发失败，而不是跳过那一个。

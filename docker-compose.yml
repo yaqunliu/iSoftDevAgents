@@ -124,7 +124,49 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - "${ISOFTDEVAGENTS_WEB_PORT:-9080}:80"
+      # 安全注释：
+      # 公网流量一律从 caddy 进来（80/443），web 只保留一个本机端口供服务器上调试，
+      # 所以这里和 postgres / backend 一样默认只绑回环地址。
+      # 真要让 web 自己直接对外（例如临时回退到纯 HTTP），
+      # 再把 ISOFTDEVAGENTS_WEB_BIND_HOST 显式改成 0.0.0.0、端口改成 80。
+      - "${ISOFTDEVAGENTS_WEB_BIND_HOST:-127.0.0.1}:${ISOFTDEVAGENTS_WEB_PORT:-9080}:80"
+
+  caddy:
+    # 设计注释：
+    # 这个容器是本次 HTTPS 方案的全部：它占住宿主机 80/443，自动签发和续期
+    # Let's Encrypt 证书，然后反代到内网的 web:80。
+    # 选它而不是给 nginx 配 certbot，是因为 nginx 的 443 server 块引用了
+    # 还不存在的证书文件就起不来，而证书又得等 nginx 起来响应 ACME 挑战才签得出来——
+    # 先有鸡还是先有蛋。Caddy 内置 ACME 客户端，没有这个问题。
+    #
+    # profiles 注释：
+    # 挂了 https 这个 profile，默认的 `docker compose up` 不会带上它。
+    # 服务器上靠 .env 里的 COMPOSE_PROFILES=https 打开；
+    # 本地开发不设这个变量，就不会有一个容器在 Mac 上抢 80/443、
+    # 也不会去给线上域名反复申请证书。
+    profiles: ["https"]
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+    ports:
+      # 80 不只是用来做跳转，Let's Encrypt 的 HTTP-01 验证也走它，不能省。
+      - "80:80"
+      - "443:443"
+    environment:
+      ISOFTDEVAGENTS_SITE_DOMAIN: ${ISOFTDEVAGENTS_SITE_DOMAIN:-}
+      ISOFTDEVAGENTS_ACME_EMAIL: ${ISOFTDEVAGENTS_ACME_EMAIL:-}
+    volumes:
+      - ./deploy/docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      # 关键：这两个必须是具名卷。
+      # 证书就存在 caddy_data 里。容器重建但卷保留 → 不会重复签发 →
+      # 不会撞上 Let's Encrypt「同一组域名每周 5 张」的速率限制。
+      # 如果这里用匿名卷或干脆不挂卷，每次 up --build 都会重新签一次，
+      # 五次之后这一周就签不出来了。
+      - caddy_data:/data
+      - caddy_config:/config
 
 volumes:
   pgdata:
+  caddy_data:
+  caddy_config:

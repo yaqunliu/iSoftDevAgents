@@ -59,6 +59,23 @@ if grep -q '^ISOFTDEVAGENTS_LLM_API_KEY=REPLACE-WITH-YOUR-REAL-KEY' "$ENV_FILE";
   echo "" >&2
 fi
 
+# 原因注释：
+# 开了 https profile 却把邮箱 / 域名留成占位值的话，caddy 会在容器里报一个
+# 相当难读的配置解析错误。这里提前拦住，把问题说清楚。
+if grep -q '^COMPOSE_PROFILES=.*https' "$ENV_FILE"; then
+  if ! grep -qE '^ISOFTDEVAGENTS_SITE_DOMAIN=.+' "$ENV_FILE"; then
+    echo "ERROR: 开启了 https profile，但 .env 里的 ISOFTDEVAGENTS_SITE_DOMAIN 是空的。" >&2
+    echo "请填上要签发证书的域名，例如：ISOFTDEVAGENTS_SITE_DOMAIN=gmonkey.ai" >&2
+    exit 1
+  fi
+  if grep -q '^ISOFTDEVAGENTS_ACME_EMAIL=CHANGE-ME@example.com' "$ENV_FILE" \
+    || ! grep -qE '^ISOFTDEVAGENTS_ACME_EMAIL=.+@.+' "$ENV_FILE"; then
+    echo "ERROR: 开启了 https profile，但 .env 里的 ISOFTDEVAGENTS_ACME_EMAIL 还是占位值。" >&2
+    echo "请换成你自己的真实邮箱，Let's Encrypt 用它发证书到期提醒。" >&2
+    exit 1
+  fi
+fi
+
 case "${1:-up}" in
   up)
     exec docker compose up -d --build

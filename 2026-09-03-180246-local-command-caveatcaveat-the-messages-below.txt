@@ -1,0 +1,659 @@
+╭─── Claude Code v2.1.233 ─────────────────────────────────────────────────────╮
+│                                          │ Tips for getting started          │
+│               Welcome back!              │ Run /init to create a CLAUDE.md … │
+│                                          │ ───────────────────────────────── │
+│                 ▗ ▗   ▖ ▖                │ What's new                        │
+│                                          │ Added GitLab merge request URL s… │
+│                   ▘▘ ▝▝                  │ Added an opt-in `forward_user_id… │
+│                                          │ Added opt-in memory cgroup suppo… │
+│        Opus 5 · API Usage Billing        │ /release-notes for more           │
+│   ~/Documents/work/code/iSoftDevAgents   │                                   │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+
+❯ /clear                                                                        
+
+❯ @zhengshu.md                                                                  
+  要按照计划给线上域名申请证书，选定了caddy方式，先按照计划中落地代码改动部分   
+  ⎿  Read zhengshu.md (239 lines)
+
+⏺ 我先把要改的文件读一遍。
+
+  Searched for 1 pattern, read 4 files, listed 1 directory (ctrl+o to expand)
+
+⏺ 读完了。开始落地代码改动。先建 Caddyfile：
+
+⏺ Write(deploy/docker/Caddyfile)
+  ⎿  Wrote 56 lines to deploy/docker/Caddyfile
+       1 # 教学注释：
+       2 # 这个文件只做一件事：在最外层接住公网流量，自动申请 / 续期 Let'
+       3 # 然后把请求原样转给内网的 web 容器（也就是现有那个 nginx）。
+       4 #
+       5 # 为什么不动 nginx.conf：
+         nd。
+       7 # 证书这件事完全被 Caddy 接管，nginx 不需要知道 https 的存在。
+       8 #
+         务）：
+      10 #   ISOFTDEVAGENTS_SITE_DOMAIN   域名，例如 gmonkey.ai
+     … +54 lines (ctrl+o to expand)
+
+⏺ Update(docker-compose.yml)
+  ⎿  Added 43 lines, removed 1 line
+      124        backend:
+      125          condition: service_healthy
+      126      ports:
+      127 -      - "${ISOFTDEVAGENTS_WEB_PORT:-9080}:80"                 
+      127 +      # 安全注释：                                            
+      128 +      # 公网流量一律从 caddy 进来（80/443），web 只保留一个本 
+          +机端口供服务器上调试，                                        
+      129 +      # 所以这里和 postgres / backend 一样默认只绑回环地址。  
+      130 +      # 真要让 web 自己直接对外（例如临时回退到纯 HTTP），    
+      131 +      # 再把 ISOFTDEVAGENTS_WEB_BIND_HOST 显式改成 0.0.0.0、端
+          +口改成 80。                                                   
+      132 +      - "${ISOFTDEVAGENTS_WEB_BIND_HOST:-127.0.0.1}:${ISOFTDEV
+          +AGENTS_WEB_PORT:-9080}:80"                                    
+      133  
+      134 +  caddy:                                                      
+      135 +    # 设计注释：                                              
+      136 +    # 这个容器是本次 HTTPS 方案的全部：它占住宿主机 80/443，自
+          +动签发和续期                                                  
+      137 +    # Let's Encrypt 证书，然后反代到内网的 web:80。           
+      138 +    # 选它而不是给 nginx 配 certbot，是因为 nginx 的 443 serve
+          +r 块引用了                                                    
+      139 +    # 还不存在的证书文件就起不来，而证书又得等 nginx 起来响应 
+          +ACME 挑战才签得出来——                                         
+      140 +    # 先有鸡还是先有蛋。Caddy 内置 ACME 客户端，没有这个问题。
+      141 +    #                                                         
+      142 +    # profiles 注释：                                         
+      143 +    # 挂了 https 这个 profile，默认的 `docker compose up` 不会
+          +带上它。                                                      
+      144 +    # 服务器上靠 .env 里的 COMPOSE_PROFILES=https 打开；      
+      145 +    # 本地开发不设这个变量，就不会有一个容器在 Mac 上抢 80/443
+          +、                                                            
+      146 +    # 也不会去给线上域名反复申请证书。                        
+      147 +    profiles: ["https"]                                       
+      148 +    image: caddy:2-alpine                                     
+      149 +    restart: unless-stopped                                   
+      150 +    depends_on:                                               
+      151 +      - web                                                   
+      152 +    ports:                                                    
+      153 +      # 80 不只是用来做跳转，Let's Encrypt 的 HTTP-01 验证也走
+          +它，不能省。                                                  
+      154 +      - "80:80"                                               
+      155 +      - "443:443"                                             
+      156 +    environment:                                              
+      157 +      ISOFTDEVAGENTS_SITE_DOMAIN: ${ISOFTDEVAGENTS_SITE_DOMAIN
+          +:-}                                                           
+      158 +      ISOFTDEVAGENTS_ACME_EMAIL: ${ISOFTDEVAGENTS_ACME_EMAIL:-
+          +}                                                             
+      159 +    volumes:                                                  
+      160 +      - ./deploy/docker/Caddyfile:/etc/caddy/Caddyfile:ro     
+      161 +      # 关键：这两个必须是具名卷。                            
+      162 +      # 证书就存在 caddy_data 里。容器重建但卷保留 → 不会重复 
+          +签发 →                                                        
+      163 +      # 不会撞上 Let's Encrypt「同一组域名每周 5 张」的速率限 
+          +制。                                                          
+      164 +      # 如果这里用匿名卷或干脆不挂卷，每次 up --build 都会重新
+          +签一次，                                                      
+      165 +      # 五次之后这一周就签不出来了。                          
+      166 +      - caddy_data:/data                                      
+      167 +      - caddy_config:/config                                  
+      168 +                                                              
+      169  volumes:
+      170    pgdata:
+      171 +  caddy_data:                                                 
+      172 +  caddy_config:                                               
+
+⏺ Now .env.server.example：
+
+⏺ Update(.env.server.example)
+  ⎿  Added 1 line, removed 1 line
+      13  #
+      14  # 和 deploy/docker/backend.env.example（本地 Docker 测试用）的
+          区别：
+      15  # 1. 依赖镜像源改回官方源（服务器在海外，走国内镜像会超时）
+      16 -# 2. 对外端口改成 80                                           
+      16 +# 2. 打开 https profile，由 caddy 占住对外的 80/443，web 退到本
+         +机 9080                                                        
+      17  # 3. 数据库口令必须自己改，不能沿用默认的 isoftdev
+      18  # 4. 按小内存机器预设了并发旋钮
+      19  #
+
+⏺ Update(.env.server.example)
+  ⎿  Added 38 lines, removed 3 lines
+      28  # 1. 对外端口 / 网络绑定
+      29  # ============================================================
+      30  
+      31 -# 这是前端对外暴露的端口。                                     
+      32 -# 配置方法：想用 http://<服务器IP>/ 直接访问就填 80。          
+      33 -ISOFTDEVAGENTS_WEB_PORT=80                                     
+      31 +# 这是前端 web 容器发布到宿主机的端口。                        
+      32 +# 配置方法：保持 9080，**仅供服务器本机调试**（curl http://127.
+         +0.0.1:9080/）。                                                
+      33 +# 公网流量一律走 caddy 的 80/443，web 不再直接对外，否则会和 ca
+         +ddy 抢 80 端口。                                               
+      34 +ISOFTDEVAGENTS_WEB_PORT=9080                                   
+      35  
+      36 +# 这是 web 调试端口绑定的地址。                                
+      37 +# 配置方法：保持 127.0.0.1。改成 0.0.0.0 等于把一个绕过 HTTPS  
+         +的入口挂到公网上。                                             
+      38 +ISOFTDEVAGENTS_WEB_BIND_HOST=127.0.0.1                         
+      39 +                                                               
+      40  # 这是后端调试端口绑定的地址。
+      41  # 配置方法：保持 127.0.0.1，只允许在服务器本机 curl 后端；前端
+          走容器内网，不受影响。
+      42  ISOFTDEVAGENTS_BACKEND_BIND_HOST=127.0.0.1
+     ...
+      48  ISOFTDEVAGENTS_PG_PORT=5432
+      49  
+      50  # ============================================================
+      51 +# 1.5 HTTPS / 证书（caddy）                                    
+      52 +# ============================================================ 
+      53 +#                                                              
+      54 +# 背景：                                                       
+      55 +# caddy 容器占住宿主机 80/443，自动向 Let's Encrypt 申请证书并 
+         +自动续期，                                                     
+      56 +# 然后反代到内网的 web:80。配置见 deploy/docker/Caddyfile。    
+      57 +#                                                              
+      58 +# 前置条件（缺一样证书都签不出来）：                           
+      59 +# 1. 域名的 A 记录已经指向这台机器的公网 IP                    
+      60 +# 2. 系统防火墙放通 80/tcp 和 443/tcp                          
+      61 +# 3. 云厂商安全组也放通 443/tcp —— 这一层只能在控制台操作，最容
+         +易漏                                                           
+      62 +                                                               
+      63 +# 这是打开 caddy 服务的开关。                                  
+      64 +# 配置方法：填 https。docker compose 会读这个变量决定启用哪些 p
+         +rofile，                                                       
+      65 +# 只有它被设成 https，caddy 才会随 `docker compose up -d` 一起 
+         +起来。                                                         
+      66 +# 想临时退回纯 HTTP：把这一行注释掉，再 docker compose stop cad
+         +dy。                                                           
+      67 +COMPOSE_PROFILES=https                                         
+      68 +                                                               
+      69 +# 这是要签发证书的域名。                                       
+      70 +# 配置方法：填裸域即可，例如 gmonkey.ai。                      
+      71 +# 想同时覆盖 www，先确认 www 的 A 记录已生效，再改 Caddyfile（ 
+         +文件末尾有步骤）。                                             
+      72 +# 注意：证书里写了几个域名就会逐个验证，有一个解析不到就整次签 
+         +发失败。                                                       
+      73 +ISOFTDEVAGENTS_SITE_DOMAIN=gmonkey.ai                          
+      74 +                                                               
+      75 +# 这是 Let's Encrypt 用来发证书到期提醒的邮箱。                
+      76 +# 配置方法：必须换成你自己的真实邮箱。留空的话 caddy 容器会直接
+         +启动失败——                                                     
+      77 +# 这是故意设计成这样的，免得配错了却要等证书快过期才发现。     
+      78 +ISOFTDEVAGENTS_ACME_EMAIL=CHANGE-ME@example.com                
+      79 +                                                               
+      80 +# ============================================================ 
+      81  # 2. 数据库
+      82  # ============================================================
+      83  
+
+⏺ 现在给 run-server.sh 加上启动前检查（和它已有的口令/Key 检查同一套路）：
+
+⏺ Update(deploy/docker/run-server.sh)
+  ⎿  Added 17 lines
+      59    echo "" >&2
+      60  fi
+      61  
+      62 +# 原因注释：                                                   
+      63 +# 开了 https profile 却把邮箱 / 域名留成占位值的话，caddy 会在 
+         +容器里报一个                                                   
+      64 +# 相当难读的配置解析错误。这里提前拦住，把问题说清楚。         
+      65 +if grep -q '^COMPOSE_PROFILES=.*https' "$ENV_FILE"; then       
+      66 +  if ! grep -qE '^ISOFTDEVAGENTS_SITE_DOMAIN=.+' "$ENV_FILE"; t
+         +hen                                                            
+      67 +    echo "ERROR: 开启了 https profile，但 .env 里的 ISOFTDEVAGE
+         +NTS_SITE_DOMAIN 是空的。" >&2                                  
+      68 +    echo "请填上要签发证书的域名，例如：ISOFTDEVAGENTS_SITE_DOM
+         +AIN=gmonkey.ai" >&2                                            
+      69 +    exit 1                                                     
+      70 +  fi                                                           
+      71 +  if grep -q '^ISOFTDEVAGENTS_ACME_EMAIL=CHANGE-ME@example.com'
+         + "$ENV_FILE" \                                                 
+      72 +    || ! grep -qE '^ISOFTDEVAGENTS_ACME_EMAIL=.+@.+' "$ENV_FILE
+         +"; then                                                        
+      73 +    echo "ERROR: 开启了 https profile，但 .env 里的 ISOFTDEVAGE
+         +NTS_ACME_EMAIL 还是占位值。" >&2                               
+      74 +    echo "请换成你自己的真实邮箱，Let's Encrypt 用它发证书到期 
+         +提醒。" >&2                                                    
+      75 +    exit 1                                                     
+      76 +  fi                                                           
+      77 +fi                                                             
+      78 +                                                               
+      79  case "${1:-up}" in
+      80    up)
+      81      exec docker compose up -d --build
+
+⏺ 现在更新部署手册。先是头部和改动清单：
+
+⏺ Update(deploy/SERVER-DEPLOY.md)
+  ⎿  Added 2 lines, removed 2 lines
+      1  # iSoftDevAgents 单机服务器部署手册
+      2  
+      3  目标机器：`79.108.225.95`
+      4 -部署方式：Docker Compose（`postgres` + `backend` + `web/nginx`）
+      5 -对外访问：`http://79.108.225.95/`（80 端口）                    
+      4 +部署方式：Docker Compose（`caddy` + `postgres` + `backend` + `we
+        +b/nginx`）                                                      
+      5 +对外访问：`https://gmonkey.ai/`（80 端口自动跳 443；HTTPS 配置见
+        +第 6 节）                                                       
+      6  
+      7  ---
+      8  
+
+⏺ Update(deploy/SERVER-DEPLOY.md)
+  ⎿  Added 6 lines
+      19  | `deploy/docker/web.Dockerfile` | 新增 `NODE_OPTIONS` 构建参数
+           | 给 V8 堆设上限，让 Rollup 到点就 GC，而不是一路涨到被 OOM ki
+          ller 杀掉 |
+      20  | `.env.server.example` | 新增服务器专用 env 模板 | 镜像源改回
+          官方源（机器在海外，国内镜像会超时）、端口改 80、强制改数据库口
+          令、**按 1.6G 内存预设并发旋钮** |
+      21  | `deploy/docker/run-server.sh` | 新增部署辅助脚本（**可选**） 
+          | 只做启动前检查；配好 `.env` 后直接 `docker compose up -d --bu
+          ild` 即可，不需要这个脚本 |
+      22 +| `deploy/docker/Caddyfile` | **新增** | HTTPS 接入：Caddy 占住
+         + 80/443，自动签发 / 续期 Let's Encrypt 证书，反代到 `web:80` | 
+      23 +| `docker-compose.yml` | 新增 `caddy` 服务（挂 `https` profile 
+         +） | 证书存在具名卷 `caddy_data` 里，容器重建也不会重复签发、不
+         +会撞速率限制；profile 保证本地开发不会被带上 |                 
+      24 +| `docker-compose.yml` | `web` 端口从 `80` 收回到 `127.0.0.1:90
+         +80` | 公网流量一律经 Caddy 进入，否则 `web` 会和 Caddy 抢 80 端
+         +口 |                                                           
+      25 +| `.env.server.example` | 新增 `COMPOSE_PROFILES` / `ISOFTDEVAG
+         +ENTS_SITE_DOMAIN` / `ISOFTDEVAGENTS_ACME_EMAIL` | HTTPS 所需； 
+         +邮箱是真实值，只写在服务器的 `.env` 里，不进仓库 |             
+      26 +| `deploy/docker/nginx.conf` | **不动** | 继续只监听容器内 80，
+         +处在 Caddy 后面。证书的事 nginx 完全不需要知道 |               
+      27 +| 前端全部代码 | **不动** | 打包时 `VITE_API_BASE_URL` 就是空字
+         +符串（同源），WebSocket 地址从 `window.location` 推导，页面变 h
+         +ttps 后自动跟着走 https / wss |                                
+      28  
+      29  所有默认值都保持和改动前一致，**本地开发流程（`run-local.sh` + 
+          清华镜像 + arm64 + 8 并发）未受任何影响**。低内存配置只通过服务
+          器的 env 文件生效。
+      30  
+
+⏺ Update(deploy/SERVER-DEPLOY.md)
+  ⎿  Added 9 lines, removed 4 lines
+      135  Swap:          6.0Gi          0B       6.0Gi
+      136  ```
+      137  
+      138 -### 2.4 打开 80 端口                                          
+      138 +### 2.4 打开 80 / 443 端口                                    
+      139  
+      140  我从外面探测过：这台机现在**只有 22 端口通,80/443/9080 全不通*
+           *。所以这一步必须做。
+      141  
+      142 +80 和 443 两个都要开：80 用于 HTTP→HTTPS 跳转、以及 Let's Encr
+          +ypt 的 HTTP-01 域名验证（证书就是靠它签出来的，不能省）；443  
+          +才是真正的站点入口。                                          
+      143 +                                                              
+      144  ```bash
+      145  # 先看用的是哪套防火墙
+      146  command -v ufw && ufw status
+     ...
+      152  
+      153  ```bash
+      154  # ufw（Ubuntu/Debian 常见）
+      153 -ufw allow 80/tcp && ufw reload && ufw status                  
+      155 +ufw allow 80/tcp && ufw allow 443/tcp && ufw reload && ufw sta
+          +tus                                                           
+      156  
+      157  # firewalld（CentOS/Rocky/Alma 常见）
+      156 -firewall-cmd --permanent --add-port=80/tcp && firewall-cmd --r
+          -eload                                                         
+      158 +firewall-cmd --permanent --add-port=80/tcp                    
+      159 +firewall-cmd --permanent --add-port=443/tcp                   
+      160 +firewall-cmd --reload                                         
+      161  
+      162  # 纯 iptables
+      163  iptables -I INPUT -p tcp --dport 80 -j ACCEPT
+      164 +iptables -I INPUT -p tcp --dport 443 -j ACCEPT                
+      165  # 持久化（Debian 系）
+      166  apt-get install -y iptables-persistent && netfilter-persistent
+            save
+      167  ```
+      168  
+      164 -> **别忘了云厂商那一层。** 如果这是 VPS/云主机，控制台里的**安
+          -全组 / 防火墙规则**也要放通 80/tcp。系统内防火墙开了但安全组没
+          -开，从外面照样访问不到。                                      
+      169 +> **别忘了云厂商那一层。** 如果这是 VPS/云主机，控制台里的**安
+          +全组 / 防火墙规则**也要放通 80/tcp 和 443/tcp。系统内防火墙开 
+          +了但安全组没开，从外面照样访问不到。**443 这一条最容易漏**——之
+          +前 80 就是踩的这个坑。                                        
+      170  
+      171  ---
+      172  
+
+⏺ Update(deploy/SERVER-DEPLOY.md)  ⎿  Added 37 lines
+      260  
+      261  这几个值分别把「并发工作流」从 8 降到 1、「Agent 线程池」从 10
+            降到 2、「常驻 PG 连接」从 10 降到 2、并给前端构建的 V8 堆设
+           了上限。**升级内存之后可以往上调。**
+      262  
+      263 +### 3.4 HTTPS 相关的四个变量                                  
+      264 +                                                              
+      265 +新模板里已经带上了，确认一遍：                                
+      266 +                                                              
+      267 +```bash                                                       
+      268 +grep -E '^(COMPOSE_PROFILES|ISOFTDEVAGENTS_SITE_DOMAIN|ISOFTDE
+          +VAGENTS_ACME_EMAIL|ISOFTDEVAGENTS_WEB_PORT|ISOFTDEVAGENTS_WEB_
+          +BIND_HOST)=' .env                                             
+      269 +```                                                           
+      270 +                                                              
+      271 +期望：                                                        
+      272 +                                                              
+      273 +```                                                           
+      274 +COMPOSE_PROFILES=https                                        
+      275 +ISOFTDEVAGENTS_SITE_DOMAIN=gmonkey.ai                         
+      276 +ISOFTDEVAGENTS_ACME_EMAIL=<你的真实邮箱>                      
+      277 +ISOFTDEVAGENTS_WEB_PORT=9080                                  
+      278 +ISOFTDEVAGENTS_WEB_BIND_HOST=127.0.0.1                        
+      279 +```                                                           
+      280 +                                                              
+      281 +只有 `ISOFTDEVAGENTS_ACME_EMAIL` 需要你自己填，改成一个**真实 
+          +邮箱**（Let's Encrypt 用它发证书到期提醒）。这个值只写在服务器
+          +的 `.env` 里，不进仓库。                                      
+      282 +                                                              
+      283 +> ⚠️ **如果这台机之前已经部署过、`.env` 是从旧模板复制的**，它
+          +里面是 `ISOFTDEVAGENTS_WEB_PORT=80`，而且没有另外三个变量。这 
+          +种情况必须手工补齐：                                          
+      284 +>                                                             
+      285 +> ```bash                                                     
+      286 +> cd /root/iSoftDevAgents                                     
+      287 +> sed -i 's|^ISOFTDEVAGENTS_WEB_PORT=.*|ISOFTDEVAGENTS_WEB_POR
+          +T=9080|' .env                                                 
+      288 +> cat >> .env <<'EOF'                                         
+      289 +> ISOFTDEVAGENTS_WEB_BIND_HOST=127.0.0.1                      
+      290 +> COMPOSE_PROFILES=https                                      
+      291 +> ISOFTDEVAGENTS_SITE_DOMAIN=gmonkey.ai                       
+      292 +> ISOFTDEVAGENTS_ACME_EMAIL=你的真实邮箱                      
+      293 +> EOF                                                         
+      294 +> ```                                                         
+      295 +>                                                             
+      296 +> **`WEB_PORT` 这一条不改的话，`web` 会继续占着 80，caddy 起不
+          +来。**                                                        
+      297 +                                                              
+      298 +`COMPOSE_PROFILES=https` 是 caddy 的总开关：`docker compose`  
+          +会读它决定启用哪些 profile，只有它被设成 `https`，`caddy` 才会
+          +随 `docker compose up -d` 一起起来。本地开发的仓库里不设这个变
+          +量，所以 Mac 上永远不会冒出一个抢 80/443、还去给线上域名申请证
+          +书的容器。                                                    
+      299 +                                                              
+      300  ---
+      301  
+      302  ## 4. 构建并启动（分两步，别让两个构建的内存峰值叠在一起）
+
+⏺ Update(deploy/SERVER-DEPLOY.md)
+  ⎿  Added 2 lines
+      424  
+      425  三个服务都应该是 `Up`，postgres 和 backend 带 `(healthy)`。
+      426  
+      427 +注意 `web` 现在发布的是 `127.0.0.1:9080`，**不再是 80**——80/44
+          +3 留给第 6 节的 caddy。所以这一步之后从外网还打不开站点，本机 
+          +`curl http://127.0.0.1:9080/` 应该是通的。走完第 6 节才对外可 
+          +用。                                                          
+      428 +                                                              
+      429  ---
+      430  
+      431  > **之后的日常更新不用分阶段，一条命令就够：**
+
+⏺ Now 第 5 节验证的端口，以及插入新的第 6 节 HTTPS：
+
+⏺ Update(deploy/SERVER-DEPLOY.md)
+  ⎿  Added 5 lines, removed 9 lines
+      510  docker compose logs backend --tail=300 \
+      511    | grep -iE "alembic|STARTUP"
+      512  
+      513 -# 5. Nginx 经内网转发到后端（走 web 容器）                    
+      514 -curl -s http://127.0.0.1/api/healthz                          
+      513 +# 5. Nginx 经内网转发到后端（走 web 容器，注意端口是 9080）   
+      514 +curl -s http://127.0.0.1:9080/api/healthz                     
+      515  
+      516  # 6. 前端静态页面
+      517 -curl -sI http://127.0.0.1/ | head -3                          
+      517 +curl -sI http://127.0.0.1:9080/ | head -3                     
+      518  ```
+      519  
+      520 -然后在**你自己的浏览器**里打开：                              
+      520 +到这里为止验证的是「内网这条链路通了」。**站点还没对外可用**——
+          +公网入口在下一节的 caddy 上。                                 
+      521  
+      522 -```                                                           
+      523 -http://79.108.225.95/                                         
+      524 -```                                                           
+      522 +如果你想先不开 HTTPS、只用纯 HTTP 跑起来验证，把 `.env` 里的 `
+          +COMPOSE_PROFILES=https` 注释掉，并把 `ISOFTDEVAGENTS_WEB_BIND_
+          +HOST` 改成 `0.0.0.0`、`ISOFTDEVAGENTS_WEB_PORT` 改成 `80`，然 
+          +后 `docker compose up -d --no-deps web`，就回到了 `http://79.1
+          +08.225.95/`。                                                 
+      523  
+      526 -应该看到登录页。注册一个账号 → 进首页 → 建项目。走到这里就说明
+          -前端、后端、数据库、WebSocket 整条链路都通了。                
+      527 -                                                              
+      524  ---
+      525  
+      526  ## 6. 出问题时怎么查
+
+⏺ Update(deploy/SERVER-DEPLOY.md)
+  ⎿  Added 99 lines, removed 1 line
+      523  
+      524  ---
+      525  
+      526 -## 6. 出问题时怎么查                                          
+      526 +## 6. 启用 HTTPS（caddy + Let's Encrypt）                     
+      527  
+      528 +### 6.0 动手之前先确认三件事                                  
+      529 +                                                              
+      530  ```bash
+      531 +# 1. 域名解析确实指向这台机                                   
+      532 +dig +short gmonkey.ai            # 期望 79.108.225.95         
+      533 +                                                              
+      534 +# 2. 80 和 443 都放通了（含云厂商安全组，见 2.4）             
+      535 +#    443 没通的话证书能签出来，但外面访问不到，会很难查       
+      536 +                                                              
+      537 +# 3. web 已经从 80 退到 9080                                  
+      538 +docker compose ps web            # PORTS 一列应该是 127.0.0.1:
+          +9080->80/tcp                                                  
+      539 +```                                                           
+      540 +                                                              
+      541 +第 3 条最关键：**caddy 启动的瞬间就要占 80 端口，如果 `web` 还
+          +占着，caddy 直接因端口冲突起不来。**                          
+      542 +                                                              
+      543 +如果 `web` 还在 80 上（旧 `.env` 没改），先按 3.4 节改完 `.env
+          +`，再执行：                                                   
+      544 +                                                              
+      545 +```bash                                                       
+      546 +docker compose up -d --no-deps web    # 让 web 退到 127.0.0.1:
+          +9080                                                          
+      547 +```                                                           
+      548 +                                                              
+      549 +### 6.1 起 caddy                                              
+      550 +                                                              
+      551 +```bash                                                       
+      552  cd /root/iSoftDevAgents
+      553 +docker compose up -d caddy                                    
+      554 +docker compose logs -f caddy                                  
+      555 +```                                                           
+      556 +                                                              
+      557 +日志里出现 `certificate obtained successfully` 就是签发成功， 
+          +可以 Ctrl-C 退出日志跟随（不会停容器）。整个过程通常十几秒。  
+      558 +                                                              
+      559 +> `.env` 里设了 `COMPOSE_PROFILES=https` 之后，后续 `docker co
+          +mpose up -d --build` 会自动带上 caddy，不用每次单独点名。     
+      560 +                                                              
+      561 +### 6.2 验证                                                  
+      562 +                                                              
+      563 +命令行部分：                                                  
+      564 +                                                              
+      565 +```bash                                                       
+      566 +# 1. 证书签发成功且证书链完整（issuer 应该是 Let's Encrypt）  
+      567 +curl -vI https://gmonkey.ai/ 2>&1 | grep -E "issuer|subject|HT
+          +TP/"                                                          
+      568 +                                                              
+      569 +# 2. HTTP 自动跳 HTTPS（期望 308）                            
+      570 +curl -sI http://gmonkey.ai/ | head -3                         
+      571 +                                                              
+      572 +# 3. API 经两层代理（caddy → nginx → backend）仍然通          
+      573 +curl -s https://gmonkey.ai/api/healthz                        
+      574 +                                                              
+      575 +# 4. 容器状态与内存占用，确认没把这台小机器压垮               
+      576 +docker compose ps && docker stats --no-stream                 
+      577 +```                                                           
+      578 +                                                              
+      579 +浏览器部分（**curl 覆盖不到，必须人工做**）：                 
+      580 +                                                              
+      581 +1. 打开 `https://gmonkey.ai/`，注册账号 → 进首页 → 建项目，地 
+          +址栏是锁标、没有混合内容警告                                  
+      582 +2. **WebSocket 握手**：DevTools → Network，确认 `wss://gmonkey
+          +.ai/api/projects/<id>/ws` 返回 **101 Switching Protocols**    
+      583 +3. **长任务不断流**：完整跑一次 Agent 生成，确认几分钟的长连接
+          +没被代理层掐断                                                
+      584 +                                                              
+      585 +第 3 条不能省。nginx 那边配了 3600s 超时（`nginx.conf:29-31`）
+          +，Caddy 侧用 `flush_interval -1` 关掉了响应缓冲，理论上没问题 
+          +，**但两层代理叠加的超时行为必须实测一次**——`healthz` 通过说明
+          +不了长连接没问题。                                            
+      586 +                                                              
+      587 +### 6.3 证书是怎么续期的（不需要做任何事）                    
+      588 +                                                              
+      589 +Caddy 内置 ACME 客户端，证书到期前约 30 天自动续期，不需要 cro
+          +n、不需要 reload 钩子。证书存在具名卷 `caddy_data` 里。       
+      590 +                                                              
+      591 +**唯一要守住的一条规矩：别删 `caddy_data` 卷。** 卷在，容器怎 
+          +么重建都不会重新签发；卷没了，每次重建都要重签一次，而 Let's E
+          +ncrypt 对同一组域名限制**每周 5 张**，用完这一周就签不出来了。
+      592 +                                                              
+      593 +调试阶段如果需要反复试，先在 `Caddyfile` 里打开 `acme_ca` 那行
+          +走 staging 环境（文件里有注释说明），跑通后再切回正式环境。   
+      594 +                                                              
+      595 +### 6.4 回滚到纯 HTTP                                         
+      596 +                                                              
+      597 +改动全是加法，回滚很干净：                                    
+      598 +                                                              
+      599 +```bash                                                       
+      600 +docker compose stop caddy                                     
+      601 +                                                              
+      602 +# .env 里改两行                                               
+      603 +sed -i 's|^ISOFTDEVAGENTS_WEB_BIND_HOST=.*|ISOFTDEVAGENTS_WEB_
+          +BIND_HOST=0.0.0.0|' .env                                      
+      604 +sed -i 's|^ISOFTDEVAGENTS_WEB_PORT=.*|ISOFTDEVAGENTS_WEB_PORT=
+          +80|' .env                                                     
+      605 +sed -i 's|^COMPOSE_PROFILES=|#COMPOSE_PROFILES=|' .env        
+      606 +                                                              
+      607 +docker compose up -d --no-deps web                            
+      608 +```                                                           
+      609 +                                                              
+      610 +就回到了 `http://79.108.225.95/`。证书留在 `caddy_data` 卷里，
+          +下次再开启不用重签。                                          
+      611 +                                                              
+      612 +### 6.5 以后要加 www                                          
+      613 +                                                              
+      614 +`www.gmonkey.ai` 目前**没有 A 记录**，所以本次证书只覆盖裸域。
+          +要加的话：                                                    
+      615 +                                                              
+      616 +1. DNS 加一条 `www` 的 A 记录指向 `79.108.225.95`，`dig +short
+          + www.gmonkey.ai` 确认生效                                     
+      617 +2. 按 `Caddyfile` 末尾的注释把域名补上                        
+      618 +3. `docker compose up -d --force-recreate caddy`              
+      619 +                                                              
+      620 +**顺序不能反。** Let's Encrypt 会对证书里写的每一个域名逐个验 
+          +证，只要有一个解析不到，是**整次签发失败**，不是跳过那一个——连
+          +原本好好的裸域证书也会一起签不出来。                          
+      621 +                                                              
+      622 +---                                                           
+      623 +                                                              
+      624 +## 7. 出问题时怎么查                                          
+      625 +                                                              
+      626 +```bash                                                       
+      627 +cd /root/iSoftDevAgents                                       
+      628  docker compose logs backend  --tail=200
+      629  docker compose logs web      --tail=100
+      630  docker compose logs postgres --tail=50
+
+⏺ Now renumber the remaining sections and add HTTPS troubleshooting rows:
+
+⏺ Update(deploy/SERVER-DEPLOY.md)
+  ⎿  Added 1 line
+      628  docker compose logs backend  --tail=200
+      629  docker compose logs web      --tail=100
+      630  docker compose logs postgres --tail=50
+      631 +docker compose logs caddy    --tail=100                       
+      632  ```
+      633  
+      634  ### 常见故障对照
+
+⏺ Update(deploy/SERVER-DEPLOY.md)
+  ⎿  Added 8 lines, removed 1 line
+      643  | `backend` 一直 unhealthy | 连不上数据库 | 确认 `POSTGRES_PAS
+           SWORD` 和 `DATABASE_URL` 里的密码**完全一致** |
+      644  | 日志报 `password authentication failed for user "isoftdev"` 
+           | `pgdata` 卷是用旧密码初始化的，改 `.env` 对已存在的卷无效 | 
+           见 4.4 节「改密码对已存在的卷无效」 |
+      645  | `\dt` 返回 `Did not find any relations.` | 只起了 postgres，
+           还没起 backend | 建表发生在 backend 启动时，走完阶段 2 再看 |
+      646 -| 浏览器打不开但 `curl 127.0.0.1` 正常 | 防火墙/安全组 | 回到 
+          -2.4,别忘了云厂商安全组 |                                      
+      646 +| 浏览器打不开但 `curl 127.0.0.1:9080` 正常 | 防火墙/安全组,或
+          + caddy 没起来 | 回到 2.4 放通 80/443（**别忘了云厂商安全组**）
+          +；再看 `docker compose logs caddy` |                          
+      647  | 页面能开但接口 502 | backend 没起来 | `logs backend` 看真实
+           报错 |
+      648 +| `caddy` 起不来，报 `address already in use` | `web` 还占着宿
+          +主机 80 端口 | 见 3.4 节把 `.env` 的 `ISOFTDEVAGENTS_WEB_PORT`
+          + 改成 9080，然后 `docker compose up -d --no-deps web` |       
+      649 +| `caddy` 起不来，报 email 相关的配置解析错误 | `ISOFTDEVAGENT
+          +S_ACME_EMAIL` 是空的 | `.env` 里填真实邮箱，`docker compose up
+          + -d --force-recreate caddy` |                                 
+      650 +| 证书签不出来，日志里是超时 / connection refused | 80 端口不 
+          +通,ACME HTTP-01 验证走不通 | `dig +short gmonkey.ai` 确认解析 
+          +对；确认系统防火墙**和云安全组**都放通了 80/tcp |             
+      651 +| 日志里出现 `too many certificates already issued` | 撞上 Let
+          +'s Encrypt 每周 5 张的速率限制 | 通常是反复删 `caddy_data` 卷 
+          +导致的。等一周，或先用 `Caddyfile` 里的 staging 环境调流程 |  
+      652 +| 浏览器显示证书不受信任 | `Caddyfile` 里 `acme_ca`（staging）
+          +没注释回去 | 注释掉那一行，`docker compose stop caddy && docke
+          +r volume rm iSoftDevAgents_caddy_data`（这次是**故意**清缓存）
+          +，再起 caddy 重签正式证书 |                                   
+      653 +| https 页面能开但 WebSocket 连不上 | 前端仍在连 `ws://` 而非 
+          +`wss://` | 前端是从 `window.location` 推导协议的，正常不该出现
+          +。真出现了就 DevTools 看请求 URL，并确认没有硬编码的 http 地址
+          + |                                                            
+      654 +| Agent 生成跑到一半连接断了 | 两层代理的超时叠加 | `nginx.con
+          +f` 已是 3600s、Caddy 用 `flush_interval -1` 关了缓冲；先 `logs
+          + caddy` 和 `logs web` 看是哪一层断的 |                        
+      655  | Agent 一启动就报 LLM 认证失败 | Key 还是占位值 | 回到 3.2 |
+      656  | Agent 报 `ModuleNotFoundError` | 该 Agent 的依赖没进镜像 | 
+           见下方「已知依赖缺口」 |
+      657  
+
+⏺ Update(deploy/SERVER-DEPLOY.md)
+  ⎿  Added 4 lines, removed 2 lines
+      726        - ./deploy/docker/nginx.conf:/etc/nginx/conf.d/default.c
+           onf:ro
+      727        - ./web-dist:/usr/share/nginx/html:ro
+      728      ports:
+      729 -      - "${ISOFTDEVAGENTS_WEB_PORT:-80}:80"                   
+      729 +      - "${ISOFTDEVAGENTS_WEB_PORT:-9080}:80"                 
+      730  ```
+      731  
+      732 +（`web` 换成挂载模式后，它前面的 caddy 完全不受影响，照旧反代 
+          +`web:80`。）                                                  
+      733 +                                                              
+      734  静态产物与架构无关,所以在 Mac 上构建、在 x86 服务器上伺服完全
+           没问题。这个方案还顺带省掉了服务器上 Node 那一整套构建负担。
+      735  
+      736  ---
+      737  
+      736 -## 7. 日常运维                                                
+      738 +## 8. 日常运维                                                
+      739  
+      740  ```bash
+      741  cd /root/iSoftDevAgents
+
+⏺ API Error: The response stopped arriving. The response above may be 
+  incomplete.
+
+✻ Crunched for 19m 38s
