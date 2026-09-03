@@ -71,14 +71,30 @@
 
 ## 4. 代码改动清单
 
-| 文件 | 动作 | 内容 |
-|---|---|---|
-| `deploy/docker/Caddyfile` | **新增** | 单域名；反代到 `web:80`；HTTP→HTTPS 跳转；WebSocket 透传 |
-| `docker-compose.yml` | 改 | 新增 `caddy` 服务（占 80/443，挂 `caddy_data`、`caddy_config` 两个**具名卷**）；`web` 的端口发布从 `80:80` 收回到 `127.0.0.1:9080:80` |
-| `.env.server.example` | 改 | 新增 `ISOFTDEVAGENTS_SITE_DOMAIN`、`ISOFTDEVAGENTS_ACME_EMAIL` 并写注释；`ISOFTDEVAGENTS_WEB_PORT` 的注释改成"仅本机调试" |
-| `deploy/SERVER-DEPLOY.md` | 改 | 新增 HTTPS 章节；第 8 节"上线后建议补的几件事"里 HTTPS 一条标记为已完成 |
-| `deploy/docker/nginx.conf` | **不动** | 继续只监听 80，处在 Caddy 后面 |
-| 前端全部代码 | **不动** | 同源配置下自动跟随 https / wss |
+> ✅ 下面全部已落地。实际实施时比原方案多做了三处，已在表格里标出。
+
+| 文件 | 动作 | 内容 | 状态 |
+|---|---|---|---|
+| `deploy/docker/Caddyfile` | **新增** | 单域名；反代到 `web:80`；HTTP→HTTPS 跳转；WebSocket 透传；`flush_interval -1` 关响应缓冲 | ✅ |
+| `docker-compose.yml` | 改 | 新增 `caddy` 服务（占 80/443，挂 `caddy_data`、`caddy_config` 两个**具名卷**）；`web` 的端口发布收回到 `127.0.0.1:9080:80` | ✅ |
+| `.env.server.example` | 改 | 新增 `ISOFTDEVAGENTS_SITE_DOMAIN`、`ISOFTDEVAGENTS_ACME_EMAIL` 并写注释；`ISOFTDEVAGENTS_WEB_PORT` 改 9080 且注释成"仅本机调试" | ✅ |
+| `deploy/SERVER-DEPLOY.md` | 改 | 新增第 6 节 HTTPS；第 9 节"上线后建议补的几件事"里 HTTPS 一条标记为已完成 | ✅ |
+| `deploy/docker/nginx.conf` | **不动** | 继续只监听 80，处在 Caddy 后面 | ✅ |
+| 前端全部代码 | **不动** | 同源配置下自动跟随 https / wss | ✅ |
+| **［追加］** `docker-compose.yml` | 改 | `caddy` 挂 `profiles: ["https"]`；`.env.server.example` 里加 `COMPOSE_PROFILES=https` 做总开关 | ✅ |
+| **［追加］** `deploy/docker/run-server.sh` | 改 | 开了 https profile 但域名为空 / 邮箱还是占位值时，启动前直接拦住报错（和已有的口令检查同一套路） | ✅ |
+| **［追加］** `deploy/docker/Caddyfile` | 改 | 全局块加 `protocols h1 h2` 关掉 HTTP/3 | ✅ |
+
+### 三处追加的原因
+
+**其一，`profiles: ["https"]` + `COMPOSE_PROFILES` 开关。**
+原方案没考虑本地开发：如果 `caddy` 是普通服务，Mac 上一执行 `docker compose up` 就会冒出一个抢 80/443、还去给 `gmonkey.ai` 反复申请证书的容器——反复签发正好会撞上第 8 节说的速率限制。挂上 profile 后，只有服务器 `.env` 里设了 `COMPOSE_PROFILES=https` 才会带上它。已实测确认 `docker compose` 会从 `.env` **文件**读这个变量，不必导出成 shell 环境变量。
+
+**其二，`run-server.sh` 的启动前检查。**
+`ISOFTDEVAGENTS_ACME_EMAIL` 留空时，Caddyfile 里的 `email {$...}` 会变成一个没有参数的指令，Caddy 报的是相当难读的配置解析错误。提前拦住，把问题说清楚。
+
+**其三，关掉 HTTP/3。**
+HTTP/3 走 **UDP** 443，而本方案和云安全组只放通了 **TCP** 443。留着 h3 的话，Caddy 会在响应头里通告一个根本连不上的 h3 端点，浏览器要先尝试失败再回落到 TCP，白白多一次往返。
 
 ### ⚠️ 两个关键点
 
@@ -136,14 +152,28 @@ rsync -avz --delete \
 
 ### 5.2 补充服务器 `.env`
 
+服务器上现有的 `.env` 是从旧模板复制的：里面是 `ISOFTDEVAGENTS_WEB_PORT=80`，另外三个变量都还没有。**四个都要处理，不是只加域名和邮箱。**
+
 ```bash
 ssh root@79.108.225.95
 cd /root/iSoftDevAgents
 
-# 追加两个变量（域名 + 真实邮箱）
+# 1. 先让 web 从 80 退到 9080——不改这条，caddy 会因端口冲突起不来
+sed -i 's|^ISOFTDEVAGENTS_WEB_PORT=.*|ISOFTDEVAGENTS_WEB_PORT=9080|' .env
+
+# 2. 追加另外三个变量（注意把邮箱换成你自己的真实邮箱）
+cat >> .env <<'EOF'
+ISOFTDEVAGENTS_WEB_BIND_HOST=127.0.0.1
+COMPOSE_PROFILES=https
 ISOFTDEVAGENTS_SITE_DOMAIN=gmonkey.ai
-ISOFTDEVAGENTS_ACME_EMAIL=<你的真实邮箱>
+ISOFTDEVAGENTS_ACME_EMAIL=你的真实邮箱
+EOF
+
+# 3. 确认四个值都对
+grep -E '^(COMPOSE_PROFILES|ISOFTDEVAGENTS_SITE_DOMAIN|ISOFTDEVAGENTS_ACME_EMAIL|ISOFTDEVAGENTS_WEB_PORT|ISOFTDEVAGENTS_WEB_BIND_HOST)=' .env
 ```
+
+`COMPOSE_PROFILES=https` 是 caddy 的总开关，`docker compose` 会直接从 `.env` 文件读它，不需要 `export`。设好之后后续 `docker compose up -d --build` 会自动带上 caddy。
 
 ### 5.3 按顺序启动（**顺序不能反**）
 
@@ -194,15 +224,22 @@ docker compose ps && docker stats --no-stream
 
 ## 7. 回滚方案
 
-改动全部是**加法**，回滚很干净：
+改动全部是**加法**，回滚很干净——而且落地后端口是走 `.env` 变量的，**不需要改 `docker-compose.yml`**：
 
 ```bash
 docker compose stop caddy
-# 把 docker-compose.yml 里 web 的端口发布改回 "80:80"
+
+# .env 里改三行：web 重新对外占 80，并关掉 caddy 的 profile 开关
+sed -i 's|^ISOFTDEVAGENTS_WEB_BIND_HOST=.*|ISOFTDEVAGENTS_WEB_BIND_HOST=0.0.0.0|' .env
+sed -i 's|^ISOFTDEVAGENTS_WEB_PORT=.*|ISOFTDEVAGENTS_WEB_PORT=80|' .env
+sed -i 's|^COMPOSE_PROFILES=|#COMPOSE_PROFILES=|' .env
+
 docker compose up -d --no-deps web
 ```
 
-即可回到当前的纯 HTTP 状态。证书留在 `caddy_data` 卷里，不影响下次再开启。
+即可回到 `http://79.108.225.95/` 的纯 HTTP 状态。证书留在 `caddy_data` 卷里，不影响下次再开启。
+
+> 注意最后一行 `sed` 把 `COMPOSE_PROFILES` 注释掉这一步不能省：不注释的话，下次 `docker compose up -d --build` 又会把 caddy 拉起来，和已经退回 80 的 web 抢端口。
 
 ---
 
@@ -230,9 +267,18 @@ docker compose up -d --no-deps web
 
 ## 10. 待办
 
+**代码部分（本机，已完成）**
+
+- [x] 实施第 4 节的代码改动
+- [x] 校验 `docker compose config`：默认不含 caddy、`COMPOSE_PROFILES=https` 时含 caddy
+- [x] 实测确认 `docker compose` 会从 `.env` **文件**读取 `COMPOSE_PROFILES`
+- [x] 确认 caddy 与 web 同在 `default` 网络，`reverse_proxy web:80` 可解析
+- [ ] `caddy validate` 校验 Caddyfile 语法 —— **本机 Docker daemon 未运行，没跑成**，改在服务器上 5.3 起容器时验证（配置错的话 caddy 会直接启动失败并打出错误行）
+
+**部署部分（服务器，待执行）**
+
 - [ ] 提供一个真实邮箱给 Let's Encrypt
 - [ ] 系统防火墙放通 443/tcp
 - [ ] **云厂商安全组**放通 443/tcp（只能在控制台操作）
-- [ ] 实施第 4 节的代码改动
-- [ ] 按第 5 节执行部署
+- [ ] 按第 5 节执行部署（注意 5.2 要改 / 加**四个**变量）
 - [ ] 完成第 6 节全部验证项（含浏览器人工验证两项）
