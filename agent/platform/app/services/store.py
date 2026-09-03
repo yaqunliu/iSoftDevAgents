@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import math
 import hashlib
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -75,7 +76,17 @@ class AsyncPostgresStore:
         self._pool: asyncpg.Pool | None = None
 
     async def initialize(self, dsn: str) -> None:
-        self._pool = await asyncpg.create_pool(dsn, min_size=10, max_size=50)
+        # 设计注释：
+        # 连接池大小改成可配置，默认值保持原来的 10/50 不变。
+        # 原因是每个 asyncpg 连接在 PostgreSQL 侧都对应一个独立后端进程，
+        # min_size=10 意味着服务一起来就常驻 10 个 PG 进程。
+        # 在小内存单机（1~2G）上，这部分常驻开销会挤掉 Agent 子进程需要的内存，
+        # 所以那种机器应该把 ISOFTDEVAGENTS_PG_POOL_MIN/MAX 调小。
+        min_size = int(os.getenv("ISOFTDEVAGENTS_PG_POOL_MIN") or "10")
+        max_size = int(os.getenv("ISOFTDEVAGENTS_PG_POOL_MAX") or "50")
+        if max_size < min_size:
+            max_size = min_size
+        self._pool = await asyncpg.create_pool(dsn, min_size=min_size, max_size=max_size)
         await self._create_schema()
 
     async def close(self) -> None:

@@ -61,8 +61,15 @@ COPY frontend /app/frontend
 ARG VITE_API_BASE_URL=/api
 ARG BASE_PATH=/
 
+# 资源注释：
+# 小内存机器（1~2G）上 rollup 打包容易被 OOM killer 杀掉。
+# 通过 NODE_OPTIONS 给 V8 一个明确堆上限，让它到点就 GC。
+# 默认留空 = 保持 Node 自己按可用内存推断的行为，不影响大内存机器。
+ARG NODE_OPTIONS=""
+
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 ENV BASE_PATH=${BASE_PATH}
+ENV NODE_OPTIONS=${NODE_OPTIONS}
 
 RUN pnpm --filter @workspace/ai-design-platform run build
 

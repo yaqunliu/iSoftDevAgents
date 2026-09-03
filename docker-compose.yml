@@ -66,6 +66,15 @@ services:
       ISOFTDEVAGENTS_CODING_AGENT_TIMEOUT: ${ISOFTDEVAGENTS_CODING_AGENT_TIMEOUT:-3600}
       ISOFTDEVAGENTS_TEST_AGENT_TIMEOUT: ${ISOFTDEVAGENTS_TEST_AGENT_TIMEOUT:-3600}
       DATABASE_URL: ${DATABASE_URL:-postgresql://isoftdev:isoftdev@postgres:5432/isoftdev}
+      # 资源注释：
+      # 这四个是小内存单机的关键旋钮，之前 compose 没有透传，
+      # 结果就是不管机器多小，后端都按"最多 8 个并发工作流 + 10 个 Agent 线程 +
+      # 常驻 10 条 PG 连接"来跑。1~2G 内存的机器必须调到 1。
+      # 默认值保持和代码里原本的默认一致，不改变已有部署的行为。
+      ISOFTDEVAGENTS_MAX_CONCURRENT_WORKFLOWS: ${ISOFTDEVAGENTS_MAX_CONCURRENT_WORKFLOWS:-8}
+      ISOFTDEVAGENTS_AGENT_EXECUTOR_MAX_WORKERS: ${ISOFTDEVAGENTS_AGENT_EXECUTOR_MAX_WORKERS:-10}
+      ISOFTDEVAGENTS_PG_POOL_MIN: ${ISOFTDEVAGENTS_PG_POOL_MIN:-10}
+      ISOFTDEVAGENTS_PG_POOL_MAX: ${ISOFTDEVAGENTS_PG_POOL_MAX:-50}
       ISOFTDEVAGENTS_DELETE_LOCAL_FILES_AFTER_PERSIST: ${ISOFTDEVAGENTS_DELETE_LOCAL_FILES_AFTER_PERSIST:-0}
       ISOFTDEVAGENTS_AGENT_DEBUG_STDIO: ${ISOFTDEVAGENTS_AGENT_DEBUG_STDIO:-1}
       ISOFTDEVAGENTS_AGENT_DEBUG_LLM_IO: ${ISOFTDEVAGENTS_AGENT_DEBUG_LLM_IO:-1}
@@ -105,6 +114,11 @@ services:
         NPM_CONFIG_REGISTRY: ${NPM_CONFIG_REGISTRY:-https://registry.npmmirror.com}
         PNPM_FETCH_TIMEOUT: ${PNPM_FETCH_TIMEOUT:-600000}
         PNPM_FETCH_RETRIES: ${PNPM_FETCH_RETRIES:-5}
+        # 资源注释：
+        # 小内存机器上 vite build 容易被 OOM killer 杀掉（退出码 137）。
+        # 给 V8 一个明确的堆上限，让它到点就 GC，而不是一路涨到把机器吃干。
+        # 留空表示用 Node 默认行为（按可用内存自动推断）。
+        NODE_OPTIONS: ${WEB_BUILD_NODE_OPTIONS:-}
     restart: unless-stopped
     depends_on:
       backend:
