@@ -40,6 +40,7 @@ import {
   shouldResetProjectListForUserChange,
 } from "@/lib/project-list-state";
 import { savePendingProjectGeneration } from "@/lib/pending-project-generation";
+import { LANDING_ROUTES } from "@/lib/landing-cta";
 
 const PROJECTS_PER_PAGE = 12;
 
@@ -186,7 +187,10 @@ export default function Home() {
 
   const handleLogout = async () => {
     await logout.mutateAsync();
-    setLocation("/auth");
+    // 交互注释：退出后落在官网首页，而不是认证页。
+    // 认证页只是"想进产品但没登录"时的中转站，用它当退出终点，
+    // 等于把一个主动离开的用户堵在登录表单前面，像是被强制要求重新登录。
+    setLocation(LANDING_ROUTES.home);
   };
 
   const handleConfirmDeleteProject = async () => {

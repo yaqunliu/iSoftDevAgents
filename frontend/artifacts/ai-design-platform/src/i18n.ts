@@ -182,7 +182,7 @@ const resources = {
       "auth.intro.step2.description": "The home page and project pages unlock after a successful sign-in.",
       "auth.intro.step3.title": "3. Sign out safely",
       "auth.intro.step3.description":
-        "Signing out clears the local session token and returns you to this page.",
+        "Signing out clears the local session token and returns you to the home page.",
       "auth.tab.login": "Sign in",
       "auth.tab.register": "Sign up",
       "auth.field.name": "Username",
@@ -630,7 +630,7 @@ const resources = {
       "auth.intro.step2.title": "2. 登录进入",
       "auth.intro.step2.description": "登录成功后，首页和项目页才会开放。",
       "auth.intro.step3.title": "3. 安全退出",
-      "auth.intro.step3.description": "退出时会清掉本地登录令牌，回到认证页。",
+      "auth.intro.step3.description": "退出时会清掉本地登录令牌，回到官网首页。",
       "auth.tab.login": "登录",
       "auth.tab.register": "注册",
       "auth.field.name": "用户名",
