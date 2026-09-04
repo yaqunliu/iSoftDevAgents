@@ -1423,7 +1423,12 @@ class AgentOrchestrator:
         """返回 Architecture Agent 使用的 Python 解释器路径。"""
         explicit = _normalize_env_path(os.getenv("ISOFTDEVAGENTS_ARCH_AGENT_PYTHON_BIN"))
         if explicit:
-            return explicit
+            if Path(explicit).exists():
+                return explicit
+            logger.warning(
+                "Configured Architecture Agent python does not exist, falling back to auto-detection. path=%s",
+                explicit,
+            )
         candidate = self.agent_root / "Architecture Agent" / ".venv" / "bin" / "python"
         if candidate.exists():
             return str(candidate)
@@ -4161,12 +4166,30 @@ class AgentOrchestrator:
         runtime_event_callback: Any = None,
     ) -> dict[str, Any] | None:
         """Architecture Agent 的执行入口。"""
+        # 原因注释：
+        # 这三个守卫以前都是裸 return None，上层只会得到一句
+        # "Architecture Agent did not return the architecture draft."，
+        # 既没有调试包也没有日志，一个配置笔误就能变成完全无法排查的失败。
+        # 所以每条跳过路径都必须自己说明是被哪个条件拦下的。
         if not self._architecture_agent_enabled():
+            logger.warning(
+                "Architecture Agent skipped because the agent is disabled. ISOFTDEVAGENTS_ENABLE_ARCH_AGENT=%s",
+                os.getenv("ISOFTDEVAGENTS_ENABLE_ARCH_AGENT"),
+            )
             return None
         architecture_root = self.agent_root / "Architecture Agent"
-        if not (architecture_root / "src" / "arch_agent" / "main.py").exists():
+        architecture_entrypoint = architecture_root / "src" / "arch_agent" / "main.py"
+        if not architecture_entrypoint.exists():
+            logger.warning(
+                "Architecture Agent skipped because its entrypoint is missing. path=%s",
+                architecture_entrypoint,
+            )
             return None
         if not self._architecture_agent_runtime_available():
+            logger.warning(
+                "Architecture Agent skipped because the runtime is unavailable. python_bin=%s",
+                self._architecture_agent_python_bin(),
+            )
             return None
 
         requirement_document = self._build_architecture_requirements_input(
