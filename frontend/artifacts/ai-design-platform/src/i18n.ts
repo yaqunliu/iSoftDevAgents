@@ -197,6 +197,7 @@ const resources = {
       "auth.switchToLogin": "Already have an account? Switch to sign in.",
       "auth.switchToRegister": "Don't have an account? Switch to sign up.",
       "auth.checkingSession": "Checking your current session...",
+      "home.backToLanding": "Gmonkey home",
       "home.documentation": "Documentation",
       "home.heroTitle": "Bring your ideas to life.",
       "home.heroDescription":
@@ -645,6 +646,7 @@ const resources = {
       "auth.switchToLogin": "已经有账号了？切换到登录即可。",
       "auth.switchToRegister": "还没有账号？切换到注册即可。",
       "auth.checkingSession": "正在检查当前登录状态...",
+      "home.backToLanding": "返回 Gmonkey 首页",
       "home.documentation": "文档",
       "home.heroTitle": "让想法快速落地。",
       "home.heroDescription": "描述你的软件想法，AI 会快速生成 PRD、架构和 UI 原型。",
