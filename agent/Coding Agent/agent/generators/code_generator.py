@@ -139,6 +139,16 @@ def generate_file_using_llm(
         verbose=True
     )
 
-    crew.kickoff()
+    try:
+        crew.kickoff()
+    except Exception as e:
+        raise RuntimeError(f"Failed to generate {file_path}: {e}") from e
+
+    if not task.output or not task.output.raw or not task.output.raw.strip():
+        raise RuntimeError(
+            f"LLM returned empty output for {file_path}. "
+            f"This usually means the response was truncated due to max_tokens limit. "
+            f"Try increasing ISOFTDEVAGENTS_CODING_MAX_TOKENS (current: {agent.llm.max_completion_tokens})."
+        )
 
     return task.output.raw
